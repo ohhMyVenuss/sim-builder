@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { layoutStore } from '../hooks/use-layout-store';
 import { budgetSpent } from '../lib/budget';
 import { askConfirm } from '../lib/confirm-dialog';
-import { CURRENCY_SYMBOL } from '../lib/constants';
-import { formatAge, formatClock } from '../lib/format';
+import { formatAge, formatClock, formatVnd } from '../lib/format';
 import {
   countUnreadableSavedLayouts,
   deleteNamedLayout,
@@ -450,8 +449,7 @@ export function LibraryPanel({ currentLayout, onLoad }: LibraryPanelProps): JSX.
                       {entry.name}
                     </div>
                     <div className="text-muted-foreground truncate">
-                      {plural(entry.layout.floors.length, 'floor')} · {CURRENCY_SYMBOL}
-                      {layoutCost(entry.layout).toLocaleString()}
+                      {plural(entry.layout.floors.length, 'floor')} · {formatVnd(layoutCost(entry.layout), true)}
                     </div>
                     <div className="flex gap-1">
                       <Button

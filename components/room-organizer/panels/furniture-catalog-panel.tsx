@@ -10,7 +10,8 @@ import { useRefusal } from '../hooks/use-refusal';
 import { budgetBlockedReason } from '../lib/budget';
 import { CATALOG_DRAG_MIME, catalogKey, catalogTileBlockedReason } from '../lib/catalog-drag';
 import { CCTV_MODELS } from '../lib/cctv-models';
-import { CATEGORIES, CURRENCY_SYMBOL, FURNITURE_CATALOG } from '../lib/constants';
+import { CATEGORIES, FURNITURE_CATALOG } from '../lib/constants';
+import { formatVnd } from '../lib/format';
 import { CctvMenu } from './cctv-menu';
 import type { CatalogItem, CategoryMeta, FurnitureCategory } from '../lib/types';
 
@@ -220,7 +221,7 @@ function CatalogTile({ item, blockedReason, onAdd, roving, overBudget }: Catalog
       <div className="px-1.5 py-1 text-center">
         <p className="text-[10px] leading-tight font-medium truncate">{item.name}</p>
         <p className="text-[9px] text-amber-400 font-semibold">
-          {overBudget ? 'Over budget' : `${CURRENCY_SYMBOL}${item.price.toLocaleString()}`}
+          {overBudget ? 'Vượt ngân quỹ' : formatVnd(item.price, true)}
         </p>
       </div>
     </button>

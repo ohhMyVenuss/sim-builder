@@ -1,11 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { useRoomEditor } from '../contexts';
 import { useActiveFloorIndex, useLayout } from '../hooks/use-layout-store';
-import { budgetSpent, furnitureSpend } from '../lib/budget';
-import { CATEGORIES, CURRENCY_SYMBOL, DEFAULT_BUDGET } from '../lib/constants';
+import { budgetLimit, budgetSpent, furnitureSpend, isHardBudgetOn } from '../lib/budget';
+import { CATEGORIES } from '../lib/constants';
+import { formatVnd } from '../lib/format';
 import { buildingArea } from '../lib/footprint';
 import { footprintArea, itemCountByCategory } from '../lib/geometry';
 import { floorRooms, hasTooManyWalls, MAX_ROOM_WALLS } from '../lib/room-detect';
@@ -15,8 +18,10 @@ import { zoneContains, zoneStats } from '../lib/zones';
 export function StatisticsPanel(): JSX.Element {
   // `layout` from the store selector; `collidingIds` stays on the context.
   const layout = useLayout();
-  const { collidingIds } = useRoomEditor();
-  const budget = DEFAULT_BUDGET;
+  const { collidingIds, actions } = useRoomEditor();
+  const budget = budgetLimit(layout);
+  const hardBudget = isHardBudgetOn(layout);
+  const [budgetInputM, setBudgetInputM] = useState<string>(() => String(Math.round(budget / 1_000_000)));
   // Collisions are checked on the active floor only; everything else here
   // covers the whole house, and the labels say which is which (#438).
   const collisionsOnActiveFloor = collidingIds.size;
@@ -97,14 +102,76 @@ export function StatisticsPanel(): JSX.Element {
           </StatRow>
         )}
 
-        <div className="pt-2 border-t space-y-1">
-          <StatRow label="Cost" highlight={overBudget}>
-            {CURRENCY_SYMBOL}
-            {cost.toLocaleString()}
+        <div className="pt-2 border-t space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground font-medium">Dự toán nội thất (VNĐ)</span>
+            <label className="flex items-center gap-1.5 text-[11px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hardBudget}
+                onChange={(e) => actions.setHardBudget(e.target.checked)}
+                className="rounded"
+              />
+              Giới hạn cứng
+            </label>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              min={0}
+              step={10}
+              aria-label="Ngân quỹ ban đầu (triệu VNĐ)"
+              value={budgetInputM}
+              onChange={(e) => setBudgetInputM(e.target.value)}
+              onBlur={() => {
+                const n = Number.parseFloat(budgetInputM);
+                if (Number.isFinite(n) && n >= 0) actions.setBudgetLimit(Math.round(n * 1_000_000));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const n = Number.parseFloat(budgetInputM);
+                  if (Number.isFinite(n) && n >= 0) actions.setBudgetLimit(Math.round(n * 1_000_000));
+                }
+              }}
+              className="h-7 text-xs w-24"
+            />
+            <span className="text-[11px] text-muted-foreground shrink-0">triệu ₫</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-[10px] ml-auto"
+              onClick={() => {
+                const n = Number.parseFloat(budgetInputM);
+                if (Number.isFinite(n) && n >= 0) actions.setBudgetLimit(Math.round(n * 1_000_000));
+              }}
+            >
+              Đặt
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {[100, 250, 500, 1000].map((m) => (
+              <Button
+                key={m}
+                type="button"
+                variant={Math.round(budget / 1_000_000) === m ? 'default' : 'outline'}
+                size="sm"
+                className="h-6 px-2 text-[10px]"
+                onClick={() => {
+                  setBudgetInputM(String(m));
+                  actions.setBudgetLimit(m * 1_000_000);
+                }}
+              >
+                {m >= 1000 ? `${m / 1000} tỷ` : `${m} tr`}
+              </Button>
+            ))}
+          </div>
+          <StatRow label="Tổng chi phí nội thất" highlight={overBudget}>
+            {formatVnd(cost)}
           </StatRow>
-          <StatRow label="Budget">
-            {CURRENCY_SYMBOL}
-            {budget.toLocaleString()}
+          <StatRow label="Ngân quỹ ban đầu">{formatVnd(budget)}</StatRow>
+          <StatRow label={overBudget ? 'Vượt ngân quỹ' : 'Còn lại'} highlight={overBudget}>
+            {formatVnd(Math.abs(budget - cost))}
           </StatRow>
           <ProgressBar value={budgetUsedRatio} label="Budget" intent={overBudget ? 'danger' : 'normal'} />
         </div>
@@ -149,8 +216,7 @@ export function StatisticsPanel(): JSX.Element {
                   <span className="truncate">{row.label}</span>
                 </span>
                 <span className="shrink-0 font-medium">
-                  {row.itemCount} · {CURRENCY_SYMBOL}
-                  {row.cost.toLocaleString()} · {row.area.toFixed(1)} m²
+                  {row.itemCount} · {formatVnd(row.cost, true)} · {row.area.toFixed(1)} m²
                 </span>
               </div>
             ))}
@@ -165,8 +231,7 @@ export function StatisticsPanel(): JSX.Element {
               const floorCost = furnitureSpend({ floors: [floor] });
               return (
                 <StatRow key={floor.id} label={floor.name}>
-                  {floor.items.length} · {CURRENCY_SYMBOL}
-                  {floorCost.toLocaleString()}
+                  {floor.items.length} · {formatVnd(floorCost, true)}
                 </StatRow>
               );
             })}

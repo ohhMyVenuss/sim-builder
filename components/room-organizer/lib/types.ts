@@ -326,6 +326,8 @@ export interface HardBudget {
   writeOff: number;
   /** `false`: switched off after use; the write-off is kept for when it comes back on. */
   enabled?: false;
+  /** Custom initial budget in VNĐ; absent falls back to DEFAULT_BUDGET. */
+  limit?: number;
 }
 
 /**

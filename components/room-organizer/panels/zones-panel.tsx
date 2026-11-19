@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { useEditorViewActions, useRoomEditor, useViewSettings } from '../contexts';
 import { NOT_WHILE_EXPLORING, useExploring } from '../hooks/use-exploring';
-import { CURRENCY_SYMBOL } from '../lib/constants';
+import { formatVnd } from '../lib/format';
 import { requestZoneName } from '../lib/editor-notices';
 import { hasTooManyWalls, MAX_ROOM_WALLS } from '../lib/room-detect';
 import { entrancePlanOutline, planFloorIndex } from '../lib/street';
@@ -211,8 +211,7 @@ export function ZonesPanel({ onDrawStart }: ZonesPanelProps = {}): JSX.Element {
                       </button>
                     )}
                     <span className="block text-muted-foreground">
-                      {stats.itemCount} {stats.itemCount === 1 ? 'item' : 'items'} · {CURRENCY_SYMBOL}
-                      {stats.cost.toLocaleString()} · {stats.area.toFixed(1)} m²
+                      {stats.itemCount} {stats.itemCount === 1 ? 'item' : 'items'} · {formatVnd(stats.cost, true)} · {stats.area.toFixed(1)} m²
                       {zone.outline ? ' · follows its walls' : ''}
                     </span>
                   </div>

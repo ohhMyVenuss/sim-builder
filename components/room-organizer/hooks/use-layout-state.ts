@@ -84,6 +84,18 @@ export interface LayoutActions {
   sellItems(ids: readonly string[]): void;
   /** Switch the hard budget (#463e) on or off. */
   setHardBudget(on: boolean): void;
+  /** Set a custom initial budget limit in VNĐ (or null to use DEFAULT_BUDGET). */
+  setBudgetLimit(limit: number | null): void;
+  /** Reconstruct house/floor walls in 3D from an analysed 2D technical drawing. */
+  applyBlueprint2D(params: {
+    width: number;
+    depth: number;
+    interiorWalls: readonly Omit<InteriorWall, 'id'>[];
+    mode: 'current-floor' | 'new-house';
+    floorCount?: number;
+    storeyHeightMeters?: number;
+    floorPlanImage?: string | null;
+  }): void;
   duplicateItem(id: string): string;
   rotateItem(id: string): void;
   moveItem(id: string, x: number, z: number): void;

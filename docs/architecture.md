@@ -73,6 +73,7 @@ components/
     │   ├── dev-diagnostics.ts           `?debug` flag + allocation-free renderer.info counters
     │   ├── pasteboard.ts                Gallery of houses received via share links (quota-safe)
     │   ├── blueprint.ts                 Print-friendly 2D blueprint HTML, canvas fitted to the plan content (#377)
+    │   ├── blueprint-2d-to-3d.ts        2D technical drawing (DXF, SVG, raster image) parser and 3D wall reconstructor
     │   ├── catalog-drag.ts              HTML5 drag MIME + catalogue keys, tile blocked reasons
     │   ├── budget.ts                    Hard budget (#463e): spend, funds left, 80 % sell-back, purchase refusal, over-budget tile reason, schema repair
     │   ├── safe-storage.ts              localStorage get/set/remove that never throw (#396)
@@ -255,6 +256,7 @@ components/
         ├── roof-panel.tsx
         ├── site-panel.tsx               Slope, neighbours + street, frontage, entrance
         ├── room-settings-panel.tsx
+        ├── blueprint-2d-panel.tsx       2D technical drawing upload, scale calibration, 2D preview and 3D reconstruction
         ├── furniture-catalog-panel.tsx
         ├── placed-items-panel.tsx
         ├── item-resize-panel.tsx

@@ -4,9 +4,9 @@ import type { CatalogItem, CategoryMeta, FloorLayout, RoofSpec, RoofStyle, RoomL
 export { STORAGE_KEY } from './saved-house';
 export const AUTOSAVE_DEBOUNCE_MS = 1500;
 export const GRID_SIZE_METERS = 0.5;
-export const DEFAULT_BUDGET = 25_000;
+export const DEFAULT_BUDGET = 250_000_000;
 
-export const CURRENCY_SYMBOL = '$';
+export const CURRENCY_SYMBOL = '₫';
 
 export const MAX_FLOORS = 4;
 
@@ -81,104 +81,104 @@ export const CATEGORIES: readonly CategoryMeta[] = [
 ] as const;
 
 export const FURNITURE_CATALOG = [
-  // Seating
-  { type: 'chair', category: 'seating', name: 'Chair', width: 0.5, depth: 0.5, height: 0.8, color: '#8B4513', icon: '🪑', price: 75 },
-  { type: 'dining-chair', category: 'seating', name: 'Dining Chair', width: 0.45, depth: 0.45, height: 0.9, color: '#5D4037', icon: '🪑', price: 95 },
-  { type: 'armchair', category: 'seating', name: 'Armchair', width: 0.9, depth: 0.9, height: 0.85, color: '#6D4C41', icon: '💺', price: 280 },
-  { type: 'sofa', category: 'seating', name: 'Sofa', width: 2.0, depth: 0.9, height: 0.8, color: '#4A5568', icon: '🛋️', price: 650 },
-  { type: 'bench', category: 'seating', name: 'Bench', width: 1.4, depth: 0.4, height: 0.45, color: '#795548', icon: '🪵', price: 150 },
+  // Seating (giá bình quân thị trường Việt Nam - VNĐ)
+  { type: 'chair', category: 'seating', name: 'Chair', width: 0.5, depth: 0.5, height: 0.8, color: '#8B4513', icon: '🪑', price: 1_200_000 },
+  { type: 'dining-chair', category: 'seating', name: 'Dining Chair', width: 0.45, depth: 0.45, height: 0.9, color: '#5D4037', icon: '🪑', price: 1_500_000 },
+  { type: 'armchair', category: 'seating', name: 'Armchair', width: 0.9, depth: 0.9, height: 0.85, color: '#6D4C41', icon: '💺', price: 4_500_000 },
+  { type: 'sofa', category: 'seating', name: 'Sofa', width: 2.0, depth: 0.9, height: 0.8, color: '#4A5568', icon: '🛋️', price: 12_000_000 },
+  { type: 'bench', category: 'seating', name: 'Bench', width: 1.4, depth: 0.4, height: 0.45, color: '#795548', icon: '🪵', price: 2_500_000 },
 
   // Tables
-  { type: 'table', category: 'tables', name: 'Table', width: 1.5, depth: 0.8, height: 0.75, color: '#CD853F', icon: '🟫', price: 220 },
-  { type: 'dining-table', category: 'tables', name: 'Dining Table', width: 1.8, depth: 1.0, height: 0.75, color: '#A0522D', icon: '🟫', price: 420 },
-  { type: 'coffee-table', category: 'tables', name: 'Coffee Table', width: 1.2, depth: 0.6, height: 0.4, color: '#CD853F', icon: '🟫', price: 180 },
-  { type: 'side-table', category: 'tables', name: 'Side Table', width: 0.5, depth: 0.5, height: 0.55, color: '#8B4513', icon: '🟫', price: 90 },
-  { type: 'desk', category: 'tables', name: 'Desk', width: 1.2, depth: 0.6, height: 0.75, color: '#8B4513', icon: '🖥️', price: 320 },
+  { type: 'table', category: 'tables', name: 'Table', width: 1.5, depth: 0.8, height: 0.75, color: '#CD853F', icon: '🟫', price: 3_500_000 },
+  { type: 'dining-table', category: 'tables', name: 'Dining Table', width: 1.8, depth: 1.0, height: 0.75, color: '#A0522D', icon: '🟫', price: 7_500_000 },
+  { type: 'coffee-table', category: 'tables', name: 'Coffee Table', width: 1.2, depth: 0.6, height: 0.4, color: '#CD853F', icon: '🟫', price: 2_800_000 },
+  { type: 'side-table', category: 'tables', name: 'Side Table', width: 0.5, depth: 0.5, height: 0.55, color: '#8B4513', icon: '🟫', price: 1_400_000 },
+  { type: 'desk', category: 'tables', name: 'Desk', width: 1.2, depth: 0.6, height: 0.75, color: '#8B4513', icon: '🖥️', price: 4_500_000 },
 
   // Bedroom
-  { type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 800 },
-  { type: 'nightstand', category: 'bedroom', name: 'Nightstand', width: 0.5, depth: 0.4, height: 0.6, color: '#8B4513', icon: '🕯️', price: 120 },
-  { type: 'wardrobe', category: 'bedroom', name: 'Wardrobe', width: 1.4, depth: 0.6, height: 2.1, color: '#6D4C41', icon: '🚪', price: 540 },
-  { type: 'dresser', category: 'bedroom', name: 'Dresser', width: 1.2, depth: 0.5, height: 0.9, color: '#8B4513', icon: '🗄️', price: 380 },
+  { type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000 },
+  { type: 'nightstand', category: 'bedroom', name: 'Nightstand', width: 0.5, depth: 0.4, height: 0.6, color: '#8B4513', icon: '🕯️', price: 1_800_000 },
+  { type: 'wardrobe', category: 'bedroom', name: 'Wardrobe', width: 1.4, depth: 0.6, height: 2.1, color: '#6D4C41', icon: '🚪', price: 8_500_000 },
+  { type: 'dresser', category: 'bedroom', name: 'Dresser', width: 1.2, depth: 0.5, height: 0.9, color: '#8B4513', icon: '🗄️', price: 5_500_000 },
 
   // Storage
-  { type: 'bookshelf', category: 'storage', name: 'Bookshelf', width: 1.0, depth: 0.3, height: 2.0, color: '#654321', icon: '📚', price: 260 },
-  { type: 'cabinet', category: 'storage', name: 'Cabinet', width: 0.9, depth: 0.4, height: 1.6, color: '#5D4037', icon: '🗃️', price: 310 },
+  { type: 'bookshelf', category: 'storage', name: 'Bookshelf', width: 1.0, depth: 0.3, height: 2.0, color: '#654321', icon: '📚', price: 3_800_000 },
+  { type: 'cabinet', category: 'storage', name: 'Cabinet', width: 0.9, depth: 0.4, height: 1.6, color: '#5D4037', icon: '🗃️', price: 4_500_000 },
 
   // Kitchen
-  { type: 'fridge', category: 'kitchen', name: 'Refrigerator', width: 0.7, depth: 0.7, height: 1.8, color: '#E0E0E0', icon: '🧊', price: 1200 },
-  { type: 'stove', category: 'kitchen', name: 'Stove', width: 0.7, depth: 0.65, height: 0.9, color: '#424242', icon: '🍳', price: 850 },
-  { type: 'dishwasher', category: 'kitchen', name: 'Dishwasher', width: 0.6, depth: 0.6, height: 0.85, color: '#9E9E9E', icon: '🍽️', price: 700 },
-  { type: 'kitchen-sink', category: 'kitchen', name: 'Kitchen Sink', width: 0.9, depth: 0.6, height: 0.9, color: '#BDBDBD', icon: '🚰', price: 450 },
-  { type: 'counter', category: 'kitchen', name: 'Counter', width: 1.2, depth: 0.6, height: 0.9, color: '#D7CCC8', icon: '🟫', price: 280 },
+  { type: 'fridge', category: 'kitchen', name: 'Refrigerator', width: 0.7, depth: 0.7, height: 1.8, color: '#E0E0E0', icon: '🧊', price: 14_000_000 },
+  { type: 'stove', category: 'kitchen', name: 'Stove', width: 0.7, depth: 0.65, height: 0.9, color: '#424242', icon: '🍳', price: 9_500_000 },
+  { type: 'dishwasher', category: 'kitchen', name: 'Dishwasher', width: 0.6, depth: 0.6, height: 0.85, color: '#9E9E9E', icon: '🍽️', price: 13_000_000 },
+  { type: 'kitchen-sink', category: 'kitchen', name: 'Kitchen Sink', width: 0.9, depth: 0.6, height: 0.9, color: '#BDBDBD', icon: '🚰', price: 4_200_000 },
+  { type: 'counter', category: 'kitchen', name: 'Counter', width: 1.2, depth: 0.6, height: 0.9, color: '#D7CCC8', icon: '🟫', price: 4_800_000 },
 
   // Bathroom
-  { type: 'toilet', category: 'bathroom', name: 'Toilet', width: 0.4, depth: 0.7, height: 0.8, color: '#FAFAFA', icon: '🚽', price: 220 },
-  { type: 'bathtub', category: 'bathroom', name: 'Bathtub', width: 1.7, depth: 0.8, height: 0.55, color: '#FAFAFA', icon: '🛁', price: 950 },
-  { type: 'shower', category: 'bathroom', name: 'Shower', width: 0.9, depth: 0.9, height: 2.1, color: '#E1F5FE', icon: '🚿', price: 680 },
-  { type: 'bathroom-sink', category: 'bathroom', name: 'Bathroom Sink', width: 0.6, depth: 0.45, height: 0.85, color: '#FAFAFA', icon: '🪞', price: 280 },
+  { type: 'toilet', category: 'bathroom', name: 'Toilet', width: 0.4, depth: 0.7, height: 0.8, color: '#FAFAFA', icon: '🚽', price: 4_500_000 },
+  { type: 'bathtub', category: 'bathroom', name: 'Bathtub', width: 1.7, depth: 0.8, height: 0.55, color: '#FAFAFA', icon: '🛁', price: 12_000_000 },
+  { type: 'shower', category: 'bathroom', name: 'Shower', width: 0.9, depth: 0.9, height: 2.1, color: '#E1F5FE', icon: '🚿', price: 8_500_000 },
+  { type: 'bathroom-sink', category: 'bathroom', name: 'Bathroom Sink', width: 0.6, depth: 0.45, height: 0.85, color: '#FAFAFA', icon: '🪞', price: 3_200_000 },
 
   // Electronics
-  { type: 'tv', category: 'electronics', name: 'TV Stand', width: 1.5, depth: 0.4, height: 0.5, color: '#2C3E50', icon: '📺', price: 600 },
-  { type: 'computer', category: 'electronics', name: 'Computer', width: 0.5, depth: 0.5, height: 0.5, color: '#37474F', icon: '🖥️', price: 950 },
-  { type: 'lamp', category: 'electronics', name: 'Lamp', width: 0.3, depth: 0.3, height: 1.5, color: '#FFD700', icon: '💡', price: 110 },
-  { type: 'floor-lamp', category: 'electronics', name: 'Floor Lamp', width: 0.35, depth: 0.35, height: 1.7, color: '#FFB300', icon: '🪔', price: 180 },
-  { type: 'wifi', category: 'electronics', name: 'Wi-Fi AP', width: 0.2, depth: 0.2, height: 0.1, color: '#0088FF', icon: '📶', price: 140, isWiFiAccessPoint: true, signalRange: 10 },
-  { type: 'router', category: 'electronics', name: 'Router', width: 0.3, depth: 0.2, height: 0.1, color: '#1a1a1a', icon: '🌐', price: 160 },
+  { type: 'tv', category: 'electronics', name: 'TV Stand', width: 1.5, depth: 0.4, height: 0.5, color: '#2C3E50', icon: '📺', price: 11_000_000 },
+  { type: 'computer', category: 'electronics', name: 'Computer', width: 0.5, depth: 0.5, height: 0.5, color: '#37474F', icon: '🖥️', price: 18_000_000 },
+  { type: 'lamp', category: 'electronics', name: 'Lamp', width: 0.3, depth: 0.3, height: 1.5, color: '#FFD700', icon: '💡', price: 1_200_000 },
+  { type: 'floor-lamp', category: 'electronics', name: 'Floor Lamp', width: 0.35, depth: 0.35, height: 1.7, color: '#FFB300', icon: '🪔', price: 2_200_000 },
+  { type: 'wifi', category: 'electronics', name: 'Wi-Fi AP', width: 0.2, depth: 0.2, height: 0.1, color: '#0088FF', icon: '📶', price: 1_800_000, isWiFiAccessPoint: true, signalRange: 10 },
+  { type: 'router', category: 'electronics', name: 'Router', width: 0.3, depth: 0.2, height: 0.1, color: '#1a1a1a', icon: '🌐', price: 2_200_000 },
   // LEGACY variant: this is the original electronics-category "CCTV" (a simple
   // signal-circle item, isCCTV/signalRange). It is superseded by the
   // 'security-camera' entry below (security category, real vision cone), but is
   // kept here for backward compatibility so previously saved layouts that
   // reference `type: 'cctv'` still load and render. Do not remove.
-  { type: 'cctv', category: 'electronics', name: 'CCTV Camera', width: 0.15, depth: 0.15, height: 0.2, color: '#2C2C2C', icon: '📹', price: 230, isCCTV: true, signalRange: 8 },
+  { type: 'cctv', category: 'electronics', name: 'CCTV Camera', width: 0.15, depth: 0.15, height: 0.2, color: '#2C2C2C', icon: '📹', price: 2_500_000, isCCTV: true, signalRange: 8 },
   // Security — cameras live in their own category and are browsed via the
   // dedicated CctvMenu (grouped by type); this base entry backs every model.
   // Defaults mirror the Hikvision DS-2CD2143G2-I dome (see lib/cctv-models); height doubles as the wall-mount height (≈2.4 m).
-  { type: 'security-camera', category: 'security', name: 'Security Camera', width: 0.25, depth: 0.2, height: 2.4, color: '#1F2933', icon: '🎥', price: 380, hasVisionCone: true, visionRange: 30, visionFov: 103, cctvModelId: 'hik-2cd2143g2' },
+  { type: 'security-camera', category: 'security', name: 'Security Camera', width: 0.25, depth: 0.2, height: 2.4, color: '#1F2933', icon: '🎥', price: 3_800_000, hasVisionCone: true, visionRange: 30, visionFov: 103, cctvModelId: 'hik-2cd2143g2' },
 
   // Decor
-  { type: 'plant', category: 'decor', name: 'House Plant', width: 0.4, depth: 0.4, height: 1.0, color: '#228B22', icon: '🪴', price: 60 },
-  { type: 'flowerpot', category: 'decor', name: 'Flowerpot', width: 0.25, depth: 0.25, height: 0.35, color: '#FF7043', icon: '🌷', price: 35 },
-  { type: 'rug', category: 'decor', name: 'Area Rug', width: 2.0, depth: 1.4, height: 0.02, color: '#C62828', icon: '🟥', price: 220 },
-  { type: 'painting', category: 'decor', name: 'Painting', width: 0.8, depth: 0.05, height: 0.6, color: '#5D4037', icon: '🖼️', price: 320 },
-  { type: 'vase', category: 'decor', name: 'Vase', width: 0.25, depth: 0.25, height: 0.5, color: '#1976D2', icon: '🏺', price: 75 },
-  { type: 'mirror', category: 'decor', name: 'Mirror', width: 0.7, depth: 0.05, height: 1.2, color: '#B0BEC5', icon: '🪞', price: 190 },
-  { type: 'curtains', category: 'decor', name: 'Curtains', width: 1.4, depth: 0.2, height: 2.4, color: '#F5DEB3', icon: '🪟', price: 120 },
-  { type: 'pendant-light', category: 'decor', name: 'Pendant Light', width: 0.45, depth: 0.45, height: 1.0, color: '#FFC107', icon: '💡', price: 95 },
-  { type: 'wall-shelf', category: 'decor', name: 'Wall Shelf', width: 1.0, depth: 0.25, height: 0.06, color: '#8B4513', icon: '📚', price: 60 },
-  { type: 'wall-clock', category: 'decor', name: 'Wall Clock', width: 0.5, depth: 0.08, height: 0.5, color: '#FFFFFF', icon: '🕐', price: 45 },
-  { type: 'candles', category: 'decor', name: 'Candle Set', width: 0.4, depth: 0.18, height: 0.30, color: '#FFE4B5', icon: '🕯️', price: 30 },
-  { type: 'books', category: 'decor', name: 'Stack of Books', width: 0.3, depth: 0.2, height: 0.25, color: '#5D4037', icon: '📖', price: 40 },
+  { type: 'plant', category: 'decor', name: 'House Plant', width: 0.4, depth: 0.4, height: 1.0, color: '#228B22', icon: '🪴', price: 850_000 },
+  { type: 'flowerpot', category: 'decor', name: 'Flowerpot', width: 0.25, depth: 0.25, height: 0.35, color: '#FF7043', icon: '🌷', price: 450_000 },
+  { type: 'rug', category: 'decor', name: 'Area Rug', width: 2.0, depth: 1.4, height: 0.02, color: '#C62828', icon: '🟥', price: 3_200_000 },
+  { type: 'painting', category: 'decor', name: 'Painting', width: 0.8, depth: 0.05, height: 0.6, color: '#5D4037', icon: '🖼️', price: 2_500_000 },
+  { type: 'vase', category: 'decor', name: 'Vase', width: 0.25, depth: 0.25, height: 0.5, color: '#1976D2', icon: '🏺', price: 950_000 },
+  { type: 'mirror', category: 'decor', name: 'Mirror', width: 0.7, depth: 0.05, height: 1.2, color: '#B0BEC5', icon: '🪞', price: 2_200_000 },
+  { type: 'curtains', category: 'decor', name: 'Curtains', width: 1.4, depth: 0.2, height: 2.4, color: '#F5DEB3', icon: '🪟', price: 2_400_000 },
+  { type: 'pendant-light', category: 'decor', name: 'Pendant Light', width: 0.45, depth: 0.45, height: 1.0, color: '#FFC107', icon: '💡', price: 1_800_000 },
+  { type: 'wall-shelf', category: 'decor', name: 'Wall Shelf', width: 1.0, depth: 0.25, height: 0.06, color: '#8B4513', icon: '📚', price: 900_000 },
+  { type: 'wall-clock', category: 'decor', name: 'Wall Clock', width: 0.5, depth: 0.08, height: 0.5, color: '#FFFFFF', icon: '🕐', price: 650_000 },
+  { type: 'candles', category: 'decor', name: 'Candle Set', width: 0.4, depth: 0.18, height: 0.30, color: '#FFE4B5', icon: '🕯️', price: 350_000 },
+  { type: 'books', category: 'decor', name: 'Stack of Books', width: 0.3, depth: 0.2, height: 0.25, color: '#5D4037', icon: '📖', price: 500_000 },
 
   // Outdoor
-  { type: 'tree', category: 'outdoor', name: 'Oak Tree', width: 1.4, depth: 1.4, height: 3.8, color: '#2E7D32', icon: '🌳', price: 250 },
-  { type: 'pine-tree', category: 'outdoor', name: 'Pine Tree', width: 1.1, depth: 1.1, height: 4.5, color: '#1B5E20', icon: '🌲', price: 280 },
-  { type: 'bush', category: 'outdoor', name: 'Bush', width: 0.8, depth: 0.8, height: 0.7, color: '#4CAF50', icon: '🌿', price: 65 },
-  { type: 'hedge', category: 'outdoor', name: 'Hedge Section', width: 2.0, depth: 0.5, height: 1.1, color: '#388E3C', icon: '🌳', price: 140 },
-  { type: 'flowerbed', category: 'outdoor', name: 'Flower Bed', width: 1.6, depth: 0.6, height: 0.3, color: '#E91E63', icon: '🌷', price: 95 },
-  { type: 'tulips', category: 'outdoor', name: 'Tulips', width: 0.5, depth: 0.5, height: 0.4, color: '#F06292', icon: '🌷', price: 35 },
-  { type: 'sunflower', category: 'outdoor', name: 'Sunflower', width: 0.4, depth: 0.4, height: 1.6, color: '#FFC107', icon: '🌻', price: 45 },
-  { type: 'rose-bush', category: 'outdoor', name: 'Rose Bush', width: 0.6, depth: 0.6, height: 0.9, color: '#C2185B', icon: '🌹', price: 75 },
-  { type: 'fence', category: 'outdoor', name: 'Fence Section', width: 2.0, depth: 0.15, height: 1.2, color: '#8D6E63', icon: '🪵', price: 120 },
-  { type: 'pool', category: 'outdoor', name: 'Swimming Pool', width: 4.0, depth: 2.5, height: 0.1, color: '#03A9F4', icon: '🏊', price: 4500 },
-  { type: 'bbq', category: 'outdoor', name: 'BBQ Grill', width: 0.8, depth: 0.6, height: 1.1, color: '#37474F', icon: '🍖', price: 320 },
-  { type: 'mailbox', category: 'outdoor', name: 'Mailbox', width: 0.4, depth: 0.3, height: 1.1, color: '#1976D2', icon: '📬', price: 60 },
-  { type: 'birdbath', category: 'outdoor', name: 'Birdbath', width: 0.7, depth: 0.7, height: 0.9, color: '#B0BEC5', icon: '🐦', price: 140 },
-  { type: 'lamppost', category: 'outdoor', name: 'Lamppost', width: 0.4, depth: 0.4, height: 3.2, color: '#263238', icon: '💡', price: 220 },
-  { type: 'stepping-stone', category: 'outdoor', name: 'Stepping Stone', width: 0.6, depth: 0.6, height: 0.06, color: '#9E9E9E', icon: '⬜', price: 25 },
-  { type: 'garden-bench', category: 'outdoor', name: 'Garden Bench', width: 1.5, depth: 0.5, height: 0.85, color: '#5D4037', icon: '🪑', price: 180 },
-  { type: 'picnic-table', category: 'outdoor', name: 'Picnic Table', width: 1.8, depth: 1.4, height: 0.75, color: '#A1887F', icon: '🪵', price: 260 },
-  { type: 'pond', category: 'outdoor', name: 'Garden Pond', width: 2.2, depth: 1.5, height: 0.25, color: '#0277BD', icon: '💧', price: 1200 },
+  { type: 'tree', category: 'outdoor', name: 'Oak Tree', width: 1.4, depth: 1.4, height: 3.8, color: '#2E7D32', icon: '🌳', price: 3_500_000 },
+  { type: 'pine-tree', category: 'outdoor', name: 'Pine Tree', width: 1.1, depth: 1.1, height: 4.5, color: '#1B5E20', icon: '🌲', price: 4_000_000 },
+  { type: 'bush', category: 'outdoor', name: 'Bush', width: 0.8, depth: 0.8, height: 0.7, color: '#4CAF50', icon: '🌿', price: 800_000 },
+  { type: 'hedge', category: 'outdoor', name: 'Hedge Section', width: 2.0, depth: 0.5, height: 1.1, color: '#388E3C', icon: '🌳', price: 1_800_000 },
+  { type: 'flowerbed', category: 'outdoor', name: 'Flower Bed', width: 1.6, depth: 0.6, height: 0.3, color: '#E91E63', icon: '🌷', price: 1_200_000 },
+  { type: 'tulips', category: 'outdoor', name: 'Tulips', width: 0.5, depth: 0.5, height: 0.4, color: '#F06292', icon: '🌷', price: 450_000 },
+  { type: 'sunflower', category: 'outdoor', name: 'Sunflower', width: 0.4, depth: 0.4, height: 1.6, color: '#FFC107', icon: '🌻', price: 500_000 },
+  { type: 'rose-bush', category: 'outdoor', name: 'Rose Bush', width: 0.6, depth: 0.6, height: 0.9, color: '#C2185B', icon: '🌹', price: 950_000 },
+  { type: 'fence', category: 'outdoor', name: 'Fence Section', width: 2.0, depth: 0.15, height: 1.2, color: '#8D6E63', icon: '🪵', price: 1_500_000 },
+  { type: 'pool', category: 'outdoor', name: 'Swimming Pool', width: 4.0, depth: 2.5, height: 0.1, color: '#03A9F4', icon: '🏊', price: 85_000_000 },
+  { type: 'bbq', category: 'outdoor', name: 'BBQ Grill', width: 0.8, depth: 0.6, height: 1.1, color: '#37474F', icon: '🍖', price: 4_500_000 },
+  { type: 'mailbox', category: 'outdoor', name: 'Mailbox', width: 0.4, depth: 0.3, height: 1.1, color: '#1976D2', icon: '📬', price: 800_000 },
+  { type: 'birdbath', category: 'outdoor', name: 'Birdbath', width: 0.7, depth: 0.7, height: 0.9, color: '#B0BEC5', icon: '🐦', price: 1_800_000 },
+  { type: 'lamppost', category: 'outdoor', name: 'Lamppost', width: 0.4, depth: 0.4, height: 3.2, color: '#263238', icon: '💡', price: 3_200_000 },
+  { type: 'stepping-stone', category: 'outdoor', name: 'Stepping Stone', width: 0.6, depth: 0.6, height: 0.06, color: '#9E9E9E', icon: '⬜', price: 350_000 },
+  { type: 'garden-bench', category: 'outdoor', name: 'Garden Bench', width: 1.5, depth: 0.5, height: 0.85, color: '#5D4037', icon: '🪑', price: 2_800_000 },
+  { type: 'picnic-table', category: 'outdoor', name: 'Picnic Table', width: 1.8, depth: 1.4, height: 0.75, color: '#A1887F', icon: '🪵', price: 4_200_000 },
+  { type: 'pond', category: 'outdoor', name: 'Garden Pond', width: 2.2, depth: 1.5, height: 0.25, color: '#0277BD', icon: '💧', price: 12_000_000 },
 
   // People / scale references
   { type: 'person', category: 'people', name: 'Adult', width: 0.5, depth: 0.3, height: 1.75, color: '#8FA3BF', icon: '🧍', price: 0 },
   { type: 'pet', category: 'people', name: 'Pet', width: 0.45, depth: 0.65, height: 0.4, color: '#A1887F', icon: '🐕', price: 0 },
 
   // Structure
-  { type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#8B4513', icon: '🪜', price: 1500 },
-  { type: 'stairs', category: 'structure', name: 'Winder Stairs', width: 2.0, depth: 2.6, height: 3.0, color: '#8B4513', icon: '🪜', price: 2200, stairsShape: 'winder' },
-  { type: 'door', category: 'structure', name: 'Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 320 },
-  { type: 'window', category: 'structure', name: 'Window', width: 1.2, depth: 0.12, height: 1.2, color: '#90CAF9', icon: '🪟', price: 240 },
+  { type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#8B4513', icon: '🪜', price: 25_000_000 },
+  { type: 'stairs', category: 'structure', name: 'Winder Stairs', width: 2.0, depth: 2.6, height: 3.0, color: '#8B4513', icon: '🪜', price: 35_000_000, stairsShape: 'winder' },
+  { type: 'door', category: 'structure', name: 'Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000 },
+  { type: 'window', category: 'structure', name: 'Window', width: 1.2, depth: 0.12, height: 1.2, color: '#90CAF9', icon: '🪟', price: 2_800_000 },
 ] as const satisfies readonly CatalogItem[];
 
 export type RoomTemplateKey = 'bedroom' | 'livingRoom' | 'office' | 'kitchen' | 'bathroom' | 'studio' | 'twoStory';
@@ -221,8 +221,8 @@ function templateOpening(
   room: { width: number; depth: number }
 ): FloorLayout['items'][number] {
   const catalog = type === 'door'
-    ? { name: 'Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 320 }
-    : { name: 'Window', width: 1.2, depth: 0.12, height: 1.2, color: '#90CAF9', icon: '🪟', price: 240 };
+    ? { name: 'Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000 }
+    : { name: 'Window', width: 1.2, depth: 0.12, height: 1.2, color: '#90CAF9', icon: '🪟', price: 2_800_000 };
   const halfW = room.width / 2;
   const halfD = room.depth / 2;
   const seat =

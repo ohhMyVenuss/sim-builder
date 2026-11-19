@@ -86,6 +86,17 @@ export type LayoutAction =
   | { type: 'removeItem'; id: string }
   | { type: 'sellItems'; ids: readonly string[] }
   | { type: 'setHardBudget'; on: boolean }
+  | { type: 'setBudgetLimit'; limit: number | null }
+  | {
+      type: 'applyBlueprint2D';
+      width: number;
+      depth: number;
+      interiorWalls: readonly InteriorWall[];
+      mode: 'current-floor' | 'new-house';
+      floorCount?: number;
+      storeyHeightMeters?: number;
+      floorPlanImage?: string | null;
+    }
   | { type: 'updateItem'; id: string; patch: Partial<FurnitureItem> }
   | { type: 'duplicateItem'; sourceId: string; newId: string }
   | { type: 'rotateItem'; id: string }
@@ -477,10 +488,98 @@ function reduceLayout(state: LayoutState, action: LayoutAction): LayoutState {
       return withLayout(state, (layout) => {
         if (isHardBudgetOn(layout) === action.on) return layout;
         const writeOff = layout.budget?.writeOff ?? 0;
-        if (action.on) return { ...layout, budget: { writeOff } };
-        if (writeOff > 0) return { ...layout, budget: { writeOff, enabled: false } };
+        const limit = layout.budget?.limit;
+        if (action.on) return { ...layout, budget: { writeOff, ...(limit !== undefined ? { limit } : {}) } };
+        if (writeOff > 0 || limit !== undefined) {
+          return { ...layout, budget: { writeOff, enabled: false, ...(limit !== undefined ? { limit } : {}) } };
+        }
         const { budget: _off, ...rest } = layout;
         return rest;
+      });
+
+    case 'setBudgetLimit':
+      return withLayout(state, (layout) => {
+        const writeOff = layout.budget?.writeOff ?? 0;
+        const hardOn = isHardBudgetOn(layout);
+        if (action.limit === null) {
+          if (hardOn) return { ...layout, budget: { writeOff } };
+          if (writeOff > 0) return { ...layout, budget: { writeOff, enabled: false } };
+          const { budget: _off, ...rest } = layout;
+          return rest;
+        }
+        const limit = Math.max(0, Math.round(action.limit));
+        return {
+          ...layout,
+          budget: {
+            writeOff,
+            ...(hardOn ? {} : { enabled: false as const }),
+            limit,
+          },
+        };
+      });
+
+    case 'applyBlueprint2D':
+      return withLayout(state, (layout) => {
+        const nextWidth = Math.max(2, Math.min(MAX_ROOM_DIMENSION, action.width));
+        const nextDepth = Math.max(2, Math.min(MAX_ROOM_DIMENSION, action.depth));
+        const walls = action.interiorWalls.slice(0, MAX_INTERIOR_WALLS_PER_FLOOR).map((w) => ({
+          ...w,
+          x1: Math.max(-nextWidth / 2, Math.min(nextWidth / 2, w.x1)),
+          z1: Math.max(-nextDepth / 2, Math.min(nextDepth / 2, w.z1)),
+          x2: Math.max(-nextWidth / 2, Math.min(nextWidth / 2, w.x2)),
+          z2: Math.max(-nextDepth / 2, Math.min(nextDepth / 2, w.z2)),
+        }));
+        const storeyH = action.storeyHeightMeters !== undefined ? clampStoreyHeight(action.storeyHeightMeters) : undefined;
+        const { cutout: _cutout, floorPlanImage: _fp, ...baseLayout } = layout;
+        const fpFields =
+          action.floorPlanImage
+            ? { floorPlanImage: action.floorPlanImage, floorPlanFitMode: 'contain' as const }
+            : action.floorPlanImage === undefined && layout.floorPlanImage
+              ? { floorPlanImage: layout.floorPlanImage }
+              : {};
+
+        if (action.mode === 'new-house') {
+          const count = Math.max(1, Math.min(MAX_FLOORS, action.floorCount ?? 1));
+          const floors: FloorLayout[] = Array.from({ length: count }, (_, idx) => ({
+            id: idx === 0 ? 'ground' : `floor-${idx + 1}`,
+            name: idx === 0 ? 'Ground Floor' : `Floor ${idx + 1}`,
+            floorColor: layout.floors[0]?.floorColor ?? INITIAL_GROUND_FLOOR.floorColor,
+            floorPattern: layout.floors[0]?.floorPattern ?? 'wood',
+            wallPattern: layout.floors[0]?.wallPattern ?? 'plaster',
+            items: [],
+            interiorWalls: walls.map((w, wi) => ({ ...w, id: `${w.id}-f${idx}-${wi}` })),
+            ...(storeyH !== undefined ? { height: storeyH } : {}),
+          }));
+          return {
+            ...baseLayout,
+            ...fpFields,
+            width: nextWidth,
+            height: nextDepth,
+            floors,
+          };
+        }
+
+        const floors = layout.floors.map((floor, idx) => {
+          if (idx !== state.activeFloorIndex) return floor;
+          const clampedItems = floor.items.map((item) => {
+            if (!item.position) return item;
+            const pos = clampToFootprint(item, item.position, nextWidth, nextDepth);
+            return { ...item, position: pos };
+          });
+          return {
+            ...floor,
+            items: clampedItems,
+            interiorWalls: walls,
+            ...(storeyH !== undefined ? { height: storeyH } : {}),
+          };
+        });
+        return {
+          ...baseLayout,
+          ...fpFields,
+          width: nextWidth,
+          height: nextDepth,
+          floors,
+        };
       });
 
     case 'updateItem':
