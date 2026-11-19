@@ -9,6 +9,7 @@ import { analyzeBlueprintFile, type Blueprint2DResult } from '../lib/blueprint-2
 import { MAX_FLOORS } from '../lib/constants';
 import { notify } from '../lib/editor-notices';
 import { MAX_STOREY_HEIGHT, MIN_STOREY_HEIGHT } from '../lib/storeys';
+import { Icon } from '../plotcraft/icon';
 
 /**
  * Import a 2D technical drawing (DXF, SVG, PNG, JPG, WebP) and automatically
@@ -100,11 +101,12 @@ export function Blueprint2DPanel(): JSX.Element {
         type="button"
         variant="default"
         size="sm"
-        className="w-full text-xs"
+        className="w-full text-xs gap-1.5"
         disabled={busy}
         onClick={() => fileRef.current?.click()}
       >
-        {busy ? 'Đang phân tích bản vẽ…' : selectedFile ? `Đổi bản vẽ (${selectedFile.name})` : '📐 Chọn bản vẽ kỹ thuật 2D'}
+        <Icon name="ruler" size={14} />
+        {busy ? 'Đang phân tích bản vẽ…' : selectedFile ? `Đổi bản vẽ (${selectedFile.name})` : 'Chọn bản vẽ kỹ thuật 2D'}
       </Button>
 
       <div className="grid grid-cols-2 gap-2">
@@ -229,8 +231,9 @@ export function Blueprint2DPanel(): JSX.Element {
             ))}
           </svg>
 
-          <Button type="button" size="sm" className="w-full text-xs" onClick={handleApply}>
-            🏗️ Dựng mô hình 3D ngay
+          <Button type="button" size="sm" className="w-full text-xs gap-1.5" onClick={handleApply}>
+            <Icon name="build" size={14} />
+            Dựng mô hình 3D ngay
           </Button>
         </div>
       )}

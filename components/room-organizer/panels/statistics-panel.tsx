@@ -11,13 +11,17 @@ import { CATEGORIES } from '../lib/constants';
 import { buildingArea } from '../lib/footprint';
 import { formatVnd } from '../lib/format';
 import { footprintArea, itemCountByCategory } from '../lib/geometry';
+import { categoryLabel, UI_TEXT, useLocale } from '../lib/i18n';
 import { floorRooms, hasTooManyWalls, MAX_ROOM_WALLS } from '../lib/room-detect';
 import { ENTRANCE_DOOR_ID, ENTRANCE_WALL_ID, entrancePlanOutline } from '../lib/street';
 import { zoneContains, zoneStats } from '../lib/zones';
+import { Icon, iconForItem } from '../plotcraft/icon';
 
 export function StatisticsPanel(): JSX.Element {
   // `layout` from the store selector; `collidingIds` stays on the context.
   const layout = useLayout();
+  const locale = useLocale();
+  const statsCopy = UI_TEXT[locale].stats;
   const { collidingIds, actions } = useRoomEditor();
   const budget = budgetLimit(layout);
   const hardBudget = isHardBudgetOn(layout);
@@ -83,22 +87,28 @@ export function StatisticsPanel(): JSX.Element {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">📊 Statistics</CardTitle>
+        <CardTitle className="text-base flex items-center gap-1.5">
+          <Icon name="panels" size={16} />
+          {statsCopy.title}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-xs">
-        <p className="text-muted-foreground">Whole house</p>
-        <StatRow label="Items">{allItems.length}</StatRow>
-        <StatRow label="Floors">{layout.floors.length}</StatRow>
-        <StatRow label="Area per floor">{roomArea.toFixed(1)} m²</StatRow>
-        <StatRow label="Total floor area">{totalArea.toFixed(1)} m²</StatRow>
-        <StatRow label="Furniture footprint">
+        <p className="text-muted-foreground">{statsCopy.wholeHouse}</p>
+        <StatRow label={statsCopy.items}>{allItems.length}</StatRow>
+        <StatRow label={statsCopy.floors}>{layout.floors.length}</StatRow>
+        <StatRow label={statsCopy.areaPerFloor}>{roomArea.toFixed(1)} m²</StatRow>
+        <StatRow label={statsCopy.totalArea}>{totalArea.toFixed(1)} m²</StatRow>
+        <StatRow label={statsCopy.footprint}>
           {footprint.toFixed(1)} m² ({density.toFixed(0)}%)
         </StatRow>
-        <ProgressBar value={density / 100} label="Coverage" intent={density > 70 ? 'warning' : 'normal'} />
+        <ProgressBar value={density / 100} label="Mật độ" intent={density > 70 ? 'warning' : 'normal'} />
 
         {collisionsOnActiveFloor > 0 && (
-          <StatRow label={`Collisions on ${activeFloorName}`} highlight>
-            ⚠️ {collisionsOnActiveFloor}
+          <StatRow label={`Va chạm (${activeFloorName})`} highlight>
+            <span className="inline-flex items-center gap-1">
+              <Icon name="warn" size={13} />
+              {collisionsOnActiveFloor}
+            </span>
           </StatRow>
         )}
 
@@ -178,9 +188,17 @@ export function StatisticsPanel(): JSX.Element {
 
         {counts.size > 0 && (
           <div className="pt-2 border-t space-y-1">
-            <p className="text-muted-foreground">By category</p>
+            <p className="text-muted-foreground">{statsCopy.byCategory}</p>
             {CATEGORIES.filter((category) => counts.has(category.key)).map((category) => (
-              <StatRow key={category.key} label={`${category.icon} ${category.label}`}>
+              <StatRow
+                key={category.key}
+                label={
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon name={iconForItem('', category.key)} size={13} />
+                    {categoryLabel(category.key, locale)}
+                  </span>
+                }
+              >
                 {counts.get(category.key) ?? 0}
               </StatRow>
             ))}
@@ -243,7 +261,7 @@ export function StatisticsPanel(): JSX.Element {
 }
 
 interface StatRowProps {
-  label: string;
+  label: React.ReactNode;
   highlight?: boolean;
   children: React.ReactNode;
 }

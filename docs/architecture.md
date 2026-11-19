@@ -67,6 +67,7 @@ components/
     │   ├── restore-point.ts             Forced restore point before a whole-layout replacement; "untouched" = equal to INITIAL_LAYOUT
     │   ├── initial-layout.ts            INITIAL_LAYOUT / INITIAL_GROUND_FLOOR, the house every session starts from
     │   ├── ids.ts                       Collision-resistant ids; withHouseId mints a house id (#342, #479)
+    │   ├── i18n.ts                      Vietnamese/English localization dictionary and category labels
     │   ├── share.ts                     Share-URL encode/decode (base64url); positions rounded to mm on encode
     │   ├── share-delivery.ts            Share-link delivery: share sheet on touch, clipboard inside the tap, copy field last
     │   ├── chunk-reload.ts              Stale-chunk detection + the one-reload-per-window guard shared with the head script
@@ -285,6 +286,7 @@ components/
         ├── print-options.tsx            Print / PDF button and its folding options (paper, orientation, scale, outdoor, every floor)
         ├── shortcuts-panel.tsx
         ├── welcome-banner.tsx
+        ├── onboarding-guide.tsx         4-step quick guide with PlotCraft SVG icons and dismissible state
         ├── minimap.tsx
         ├── plan-thumb.tsx
         ├── achievements-panel.tsx

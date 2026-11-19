@@ -1,22 +1,16 @@
 'use client';
 
 import { onRovingKeyDown } from '../hooks/roving-keys';
+import { UI_TEXT, useLocale } from '../lib/i18n';
 import { Icon, type PlotcraftIconName } from '../plotcraft/icon';
 
 export type SidebarTab = 'build' | 'buy' | 'style' | 'manage';
 
-interface TabSpec {
-  key: SidebarTab;
-  icon: PlotcraftIconName;
-  label: string;
-  hint: string;
-}
-
-const TABS: readonly TabSpec[] = [
-  { key: 'build',  icon: 'build',   label: 'Build',  hint: 'Floors, walls, roof, dimensions' },
-  { key: 'buy',    icon: 'buy',     label: 'Buy',    hint: 'Catalogue, sets, placed items' },
-  { key: 'style',  icon: 'sparkle', label: 'Style',  hint: 'Themes, time of day, finishes' },
-  { key: 'manage', icon: 'box',     label: 'Manage', hint: 'Templates, library, actions, stats' },
+const TAB_KEYS: ReadonlyArray<{ key: SidebarTab; icon: PlotcraftIconName }> = [
+  { key: 'build', icon: 'build' },
+  { key: 'buy', icon: 'buy' },
+  { key: 'style', icon: 'sparkle' },
+  { key: 'manage', icon: 'box' },
 ];
 
 /** The drawer's `<aside>`: the panel toggle names it in `aria-controls`. */
@@ -35,6 +29,9 @@ export interface SidebarTabsProps {
 }
 
 export function SidebarTabs({ active, onChange }: SidebarTabsProps): JSX.Element {
+  const locale = useLocale();
+  const tabCopy = UI_TEXT[locale].tabs;
+  const TABS = TAB_KEYS.map((t) => ({ ...t, ...tabCopy[t.key] }));
   return (
     <div
       role="tablist"

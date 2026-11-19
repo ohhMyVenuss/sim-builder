@@ -12,6 +12,8 @@ import { CATALOG_DRAG_MIME, catalogKey, catalogTileBlockedReason } from '../lib/
 import { CCTV_MODELS } from '../lib/cctv-models';
 import { CATEGORIES, FURNITURE_CATALOG } from '../lib/constants';
 import { formatVnd } from '../lib/format';
+import { categoryLabel, UI_TEXT, useLocale } from '../lib/i18n';
+import { Icon, iconForItem } from '../plotcraft/icon';
 import { CctvMenu } from './cctv-menu';
 import type { CatalogItem, CategoryMeta, FurnitureCategory } from '../lib/types';
 
@@ -33,6 +35,8 @@ export interface FurnitureCatalogPanelProps {
 
 export function FurnitureCatalogPanel({ onAdd }: FurnitureCatalogPanelProps): JSX.Element {
   const activeFloorIndex = useActiveFloorIndex();
+  const locale = useLocale();
+  const copy = UI_TEXT[locale].catalog;
   // Hard budget (#463e): tiles over what's left grey out; null when off.
   const remaining = useBudgetRemaining();
   const refuse = useRefusal();
@@ -60,16 +64,19 @@ export function FurnitureCatalogPanel({ onAdd }: FurnitureCatalogPanelProps): JS
     <Card className="shrink-0 overflow-hidden">
       <CardHeader className="space-y-3">
         <CardTitle className="flex items-center justify-between">
-          <span>Catalogue</span>
-          <span className="text-[10px] font-normal text-muted-foreground">{filtered.length} items</span>
+          <span>{copy.title}</span>
+          <span className="text-[10px] font-normal text-muted-foreground">{filtered.length}</span>
         </CardTitle>
-        <Input
-          aria-label="Search furniture"
-          placeholder="🔍 Search furniture…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          className="text-xs"
-        />
+        <div className="relative">
+          <Icon name="magnify" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            aria-label={copy.searchPlaceholder}
+            placeholder={copy.searchPlaceholder}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="text-xs pl-8"
+          />
+        </div>
         <CategoryRail filter={filter} onSelect={setFilter} />
       </CardHeader>
       <CardContent className="pt-3">
@@ -118,12 +125,13 @@ interface CategoryRailProps {
 }
 
 function CategoryRail({ filter, onSelect }: CategoryRailProps): JSX.Element {
+  const locale = useLocale();
   return (
     <div className="grid grid-cols-6 gap-1">
       <CategoryButton
         active={filter === 'all'}
-        icon="✨"
-        label="All"
+        iconName="sparkle"
+        label={UI_TEXT[locale].catalog.all}
         count={FURNITURE_CATALOG.length}
         onClick={() => onSelect('all')}
       />
@@ -131,8 +139,8 @@ function CategoryRail({ filter, onSelect }: CategoryRailProps): JSX.Element {
         <CategoryButton
           key={category.key}
           active={filter === category.key}
-          icon={category.icon}
-          label={category.label}
+          iconName={iconForItem('', category.key)}
+          label={categoryLabel(category.key, locale)}
           count={category.key === 'security' ? CCTV_MODELS.length : (COUNTS_BY_CATEGORY.get(category.key) ?? 0)}
           onClick={() => onSelect(category.key)}
         />
@@ -143,13 +151,13 @@ function CategoryRail({ filter, onSelect }: CategoryRailProps): JSX.Element {
 
 interface CategoryButtonProps {
   active: boolean;
-  icon: string;
+  iconName: ReturnType<typeof iconForItem>;
   label: string;
   count: number;
   onClick(): void;
 }
 
-function CategoryButton({ active, icon, label, count, onClick }: CategoryButtonProps): JSX.Element {
+function CategoryButton({ active, iconName, label, count, onClick }: CategoryButtonProps): JSX.Element {
   return (
     <button
       type="button"
@@ -162,10 +170,8 @@ function CategoryButton({ active, icon, label, count, onClick }: CategoryButtonP
           : 'bg-muted/50 hover:bg-muted text-muted-foreground'
       }`}
     >
-      <span className="text-base leading-none" aria-hidden>
-        {icon}
-      </span>
-      <span className="text-[9px] mt-0.5 truncate w-full text-center">{label}</span>
+      <Icon name={iconName} size={15} />
+      <span className="text-[9px] mt-0.5 truncate w-full text-center px-0.5">{label}</span>
     </button>
   );
 }
@@ -215,8 +221,8 @@ function CatalogTile({ item, blockedReason, onAdd, roving, overBudget }: Catalog
           : 'hover:bg-muted hover:border-amber-300 active:scale-[0.97] cursor-grab active:cursor-grabbing hover:shadow-md'
       }`}
     >
-      <div className="flex items-center justify-center aspect-square text-3xl bg-muted/40">
-        <span aria-hidden>{item.icon}</span>
+      <div className="flex items-center justify-center aspect-square text-slate-200 bg-muted/40">
+        <Icon name={iconForItem(item.type, item.category)} size={28} />
       </div>
       <div className="px-1.5 py-1 text-center">
         <p className="text-[10px] leading-tight font-medium truncate">{item.name}</p>
