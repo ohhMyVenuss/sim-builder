@@ -330,7 +330,7 @@ describe('floorClonePrice (#588)', () => {
   it('names the floor and the price when the budget refuses the copy', () => {
     const beds = Array.from({ length: 18 }, (_, i) => makeItem({ id: `bed-${i}`, category: 'bedroom', price: 8_000_000 }));
     const layout = makeLayout({ floors: [makeFloor({ items: beds })], budget: { writeOff: 0 } });
-    expect(floorCloneRefusal(layout, 'Ground', beds)).toContain('144.000.000 ₫');
+    expect(floorCloneRefusal(layout, 'Ground', beds)).toContain('144m');
     expect(floorCloneRefusal(layout, 'Ground', beds)).toContain('Vượt ngân quỹ');
     expect(floorCloneRefusal({ ...layout, budget: { writeOff: 0, enabled: false } }, 'Ground', beds)).toBeNull();
     expect(floorCloneRefusal(layout, 'Ground', beds.slice(0, 10))).toBeNull();

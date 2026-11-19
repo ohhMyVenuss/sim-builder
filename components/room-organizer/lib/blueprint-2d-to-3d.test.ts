@@ -216,10 +216,11 @@ describe('blueprint-2d-to-3d', () => {
 });
 
 describe('formatVnd', () => {
-  it('formats Vietnamese Dong in full and compact modes', () => {
-    expect(formatVnd(12_500_000)).toContain('12.500.000');
-    expect(formatVnd(12_500_000)).toContain('₫');
-    expect(formatVnd(12_500_000, true)).toBe('12,5 tr ₫');
-    expect(formatVnd(1_500_000_000, true)).toBe('1,5 tỷ ₫');
+  it('formats Vietnamese Dong using short units (k, m, b) and full mode', () => {
+    expect(formatVnd(100_000)).toBe('100k');
+    expect(formatVnd(12_500_000)).toBe('12.5m');
+    expect(formatVnd(1_500_000_000)).toBe('1.5b');
+    expect(formatVnd(12_500_000, false)).toContain('12.500.000');
+    expect(formatVnd(12_500_000, false)).toContain('₫');
   });
 });

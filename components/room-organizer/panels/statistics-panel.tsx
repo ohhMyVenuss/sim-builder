@@ -288,7 +288,7 @@ export function StatisticsPanel(): JSX.Element {
                     actions.setBudgetLimit(m * 1_000_000);
                   }}
                 >
-                  {m >= 1000 ? `${m / 1000} tỷ` : `${m} tr`}
+                  {m >= 1000 ? `${m / 1000}b` : `${m}m`}
                 </Button>
               ))}
             </div>

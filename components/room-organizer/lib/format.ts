@@ -34,23 +34,23 @@ export function formatAge(ms: number, options: { seconds?: boolean } = {}): stri
   return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 }
 
-/** Format a Vietnamese Dong amount, e.g. "12.500.000 ₫" or compact "12,5 tr ₫". */
-export function formatVnd(amount: number, compact = false): string {
+/** Format a Vietnamese Dong amount using short units by default: 100k, 12.5m, 1.5b. */
+export function formatVnd(amount: number, compact = true): string {
   const rounded = Math.round(amount);
   const abs = Math.abs(rounded);
   const sign = rounded < 0 ? '-' : '';
   if (compact) {
     if (abs >= 1_000_000_000) {
-      const ty = (abs / 1_000_000_000).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
-      return `${sign}${ty} tỷ ₫`;
+      const b = (abs / 1_000_000_000).toFixed(2).replace(/\.?0+$/, '');
+      return `${sign}${b}b`;
     }
     if (abs >= 1_000_000) {
-      const tr = (abs / 1_000_000).toFixed(1).replace(/\.0$/, '').replace('.', ',');
-      return `${sign}${tr} tr ₫`;
+      const m = (abs / 1_000_000).toFixed(1).replace(/\.0$/, '');
+      return `${sign}${m}m`;
     }
     if (abs >= 1_000) {
       const k = Math.round(abs / 1_000);
-      return `${sign}${k.toLocaleString('vi-VN')}k ₫`;
+      return `${sign}${k}k`;
     }
   }
   return `${rounded.toLocaleString('vi-VN')} ₫`;
