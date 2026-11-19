@@ -94,6 +94,7 @@ export type LayoutAction =
       width: number;
       depth: number;
       interiorWalls: readonly InteriorWall[];
+      openings?: readonly import('../lib/blueprint-2d-to-3d').DetectedOpening[];
       mode: 'current-floor' | 'new-house';
       floorCount?: number;
       storeyHeightMeters?: number;
@@ -564,6 +565,21 @@ function reduceLayout(state: LayoutState, action: LayoutAction): LayoutState {
               ? { floorPlanImage: layout.floorPlanImage }
               : {};
 
+        const openingItems: FurnitureItem[] = (action.openings ?? []).map((op, idx) => ({
+          id: `bp-${op.type}-${idx}`,
+          type: op.type,
+          name: op.type === 'door' ? 'Door' : 'Window',
+          category: 'structure' as const,
+          icon: op.type === 'door' ? 'door' : 'window',
+          position: { x: op.x, y: 0, z: op.z },
+          rotation: op.rotation,
+          width: op.width,
+          depth: 0.1,
+          height: op.height ?? (op.type === 'door' ? 2.1 : 1.2),
+          color: op.type === 'door' ? '#8b5a2b' : '#38bdf8',
+          price: op.type === 'door' ? 2_500_000 : 1_800_000,
+        }));
+
         if (action.mode === 'new-house') {
           const count = Math.max(1, Math.min(MAX_FLOORS, action.floorCount ?? 1));
           const floors: FloorLayout[] = Array.from({ length: count }, (_, idx) => ({
@@ -572,7 +588,7 @@ function reduceLayout(state: LayoutState, action: LayoutAction): LayoutState {
             floorColor: layout.floors[0]?.floorColor ?? INITIAL_GROUND_FLOOR.floorColor,
             floorPattern: layout.floors[0]?.floorPattern ?? 'wood',
             wallPattern: layout.floors[0]?.wallPattern ?? 'plaster',
-            items: [],
+            items: idx === 0 ? openingItems : [],
             interiorWalls: walls.map((w, wi) => ({ ...w, id: `${w.id}-f${idx}-${wi}` })),
             ...(storeyH !== undefined ? { height: storeyH } : {}),
           }));
@@ -594,7 +610,7 @@ function reduceLayout(state: LayoutState, action: LayoutAction): LayoutState {
           });
           return {
             ...floor,
-            items: clampedItems,
+            items: [...clampedItems, ...openingItems],
             interiorWalls: walls,
             ...(storeyH !== undefined ? { height: storeyH } : {}),
           };

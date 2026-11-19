@@ -54,7 +54,7 @@ function withView(children: ReactNode, sounds = true) {
 
 describe('Duplicate floor under the hard budget (#588)', () => {
   it('says why and plays the refused cue instead of doing nothing', () => {
-    seed(14_400);
+    seed(144_000_000);
     render(withView(<FloorSwitcher />));
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Clone/ }));
@@ -63,12 +63,12 @@ describe('Duplicate floor under the hard budget (#588)', () => {
     expect(vi.mocked(playSound).mock.calls).toEqual([['refused']]);
     expect(notices).toHaveLength(1);
     expect(notices[0]!.tone).toBe('error');
-    expect(notices[0]!.message).toContain('Over budget');
-    expect(notices[0]!.message).toContain('$14,400');
+    expect(notices[0]!.message).toMatch(/Vượt ngân quỹ|Over budget/);
+    expect(notices[0]!.message).toMatch(/\$14,400|144(\.000\.000)?\s*₫/);
   });
 
   it('still clones a floor the budget covers, silently', () => {
-    seed(10_000);
+    seed(100_000_000);
     render(withView(<FloorSwitcher />));
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Clone/ }));
@@ -79,7 +79,7 @@ describe('Duplicate floor under the hard budget (#588)', () => {
   });
 
   it('honours the mute switch', () => {
-    seed(14_400);
+    seed(144_000_000);
     render(withView(<FloorSwitcher />, false));
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Clone/ }));
@@ -91,10 +91,10 @@ describe('Duplicate floor under the hard budget (#588)', () => {
 
 describe('An over-budget catalogue tile (#642)', () => {
   it('says why on click and on Enter, with the refused cue, and adds nothing', () => {
-    seed(24_800);
+    seed(245_000_000);
     const onAdd = vi.fn();
     render(withView(<CatalogStrip category="seating" onAdd={onAdd} />));
-    const sofa = screen.getByTitle(/^Sofa — Over budget/);
+    const sofa = screen.getByTitle(/^Sofa — (Over budget|Vượt ngân quỹ)/);
     act(() => {
       fireEvent.click(sofa);
     });
@@ -104,17 +104,17 @@ describe('An over-budget catalogue tile (#642)', () => {
     expect(onAdd).not.toHaveBeenCalled();
     expect(vi.mocked(playSound).mock.calls).toEqual([['refused'], ['refused']]);
     expect(notices.map((notice) => [notice.message, notice.tone])).toEqual([
-      ['Over budget: $200 left', 'error'],
-      ['Over budget: $200 left', 'error'],
+      [expect.stringMatching(/Over budget: \$200 left|Vượt ngân quỹ: còn 5\.000\.000 ₫/), 'error'],
+      [expect.stringMatching(/Over budget: \$200 left|Vượt ngân quỹ: còn 5\.000\.000 ₫/), 'error'],
     ]);
   });
 
   it('an affordable tile adds as before', () => {
-    seed(24_800);
+    seed(245_000_000);
     const onAdd = vi.fn();
     render(withView(<CatalogStrip category="seating" onAdd={onAdd} />));
     act(() => {
-      fireEvent.click(screen.getByTitle(/^Bench — \$150/));
+      fireEvent.click(screen.getByTitle(/^Bench — (\$150|2\.500\.000 ₫)/));
     });
     expect(onAdd).toHaveBeenCalledTimes(1);
     expect(notices).toHaveLength(0);

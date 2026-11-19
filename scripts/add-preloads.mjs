@@ -32,7 +32,8 @@ const RUNTIME_PRELOAD_RE = /<link rel="preload" as="script"[^>]*? href="([^"]*?)
 export function pageChunks(manifest) {
   const files = [];
   for (const [key, entry] of Object.entries(manifest)) {
-    if (!key.startsWith(PAGE_ENTRY_PREFIX)) continue;
+    const normalizedKey = key.replace(/\\/g, '/');
+    if (!normalizedKey.startsWith(PAGE_ENTRY_PREFIX)) continue;
     for (const file of entry.files ?? []) {
       if (file.endsWith('.js') && !files.includes(file)) files.push(file);
     }

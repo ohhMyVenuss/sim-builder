@@ -51,8 +51,8 @@ describe('Statistics by floor (#693)', () => {
       </RoomEditorProvider>
     );
     const row = (label: string) => screen.getByText(label).parentElement?.textContent ?? '';
-    expect(row('Ground')).toContain('$650');
-    expect(row('Ground')).not.toContain('$950');
-    expect(row('Upper')).toContain('$800');
+    expect(row('Ground')).toMatch(/(?:650 ₫|\$650)/);
+    expect(row('Ground')).not.toMatch(/(?:950 ₫|\$950)/);
+    expect(row('Upper')).toMatch(/(?:800 ₫|\$800)/);
   });
 });

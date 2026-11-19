@@ -111,6 +111,7 @@ export const layoutStore = createStore<LayoutStoreState>()((set) => {
         width: params.width,
         depth: params.depth,
         interiorWalls: params.interiorWalls.map((w) => ({ ...w, id: nextId('wall') })),
+        ...(params.openings ? { openings: params.openings } : {}),
         mode: params.mode,
         ...(params.floorCount !== undefined ? { floorCount: params.floorCount } : {}),
         ...(params.storeyHeightMeters !== undefined ? { storeyHeightMeters: params.storeyHeightMeters } : {}),

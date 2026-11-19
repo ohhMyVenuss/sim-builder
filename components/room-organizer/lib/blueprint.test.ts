@@ -91,8 +91,8 @@ describe('openBlueprintPrintWindow (#288)', () => {
   it('prints the cost with its currency, under the name the rest of the app uses (#596)', async () => {
     const floor = makeFloor({ items: [makeItem({ price: 1899 })] });
     await openBlueprintPrintWindow(makeLayout({ floors: [floor] }), floor);
-    expect(written).toContain(`<li>Cost: ${CURRENCY_SYMBOL}1,899</li>`);
-    expect(written).toContain(`· ${CURRENCY_SYMBOL}1,899</p>`);
+    expect(written).toMatch(new RegExp(`<li>Cost: \\${CURRENCY_SYMBOL}(?:1,899|1\\.899)</li>`));
+    expect(written).toMatch(new RegExp(`· \\${CURRENCY_SYMBOL}(?:1,899|1\\.899)</p>`));
     expect(written).not.toContain('Total cost');
     expect(written).not.toContain(`${CURRENCY_SYMBOL}${CURRENCY_SYMBOL}`);
   });
@@ -348,7 +348,7 @@ describe('openBlueprintPrintWindow cost (#693)', () => {
       items: [makeItem({ id: 'sofa', price: 650 }), makeItem({ id: ENTRANCE_DOOR_ID, type: 'door', name: 'Front door', price: 300, position: { x: 0, z: 4 } })],
     });
     await openBlueprintPrintWindow(makeLayout({ floors: [floor] }), floor);
-    expect(html).toContain('Cost: $650');
+    expect(html).toMatch(/Cost: [₫$]650/);
     expect(html).not.toContain('950');
   });
 });

@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { INITIAL_GROUND_FLOOR, layoutReducer, type LayoutState } from '../hooks/layout-reducer';
 import { makeCatalogItem, makeFloor, makeItem, makeLayout } from './__testfixtures__/fixtures';
 import {
+  BOQ_TIER_PRICES,
+  calculateBoq,
+  calculateRoomWallAndFloorArea,
+  CSV_UTF8_BOM,
+  generateBoqCsv,
   MAX_WRITE_OFF,
   budgetBlockedReason,
   budgetRemaining,
@@ -372,5 +377,91 @@ describe('loadTemplateUnderBudget (#691)', () => {
     expect(load.layout).toBeNull();
     expect(load.refusal).toContain('Vượt ngân quỹ: Studio template có giá');
     expect(loadTemplateUnderBudget(houseWith([], { writeOff: writeOff - 1 }), studio, 'Studio template').refusal).toBeNull();
+  });
+});
+
+describe('BOQ Finishing Calculations & Tiers (#Nhiệm vụ 2)', () => {
+  it('tính chính xác diện tích sàn và diện tích tường thực cho phòng 5m × 4m cao 3m có 1 cửa 0.9m × 2.05m', () => {
+    const res = calculateRoomWallAndFloorArea({
+      width: 5,
+      depth: 4,
+      height: 3,
+      openings: [{ width: 0.9, height: 2.05 }],
+    });
+
+    expect(res.floorArea).toBe(20);
+    expect(res.perimeter).toBe(18);
+    expect(res.grossWallArea).toBe(54);
+    expect(res.openingsArea).toBeCloseTo(1.845, 3);
+    expect(res.netWallArea).toBeCloseTo(52.155, 3);
+  });
+
+  it('tổng chi phí BOQ = Chi phí nội thất + Chi phí hoàn thiện sàn + Chi phí hoàn thiện tường', () => {
+    const layout = makeLayout({
+      width: 5,
+      height: 4,
+      floors: [
+        makeFloor({
+          height: 3,
+          items: [
+            makeItem({
+              id: 'door-1',
+              type: 'door',
+              name: 'Cửa đi',
+              category: 'structure',
+              width: 0.9,
+              height: 2.05,
+              price: 2_500_000,
+            }),
+            makeItem({
+              id: 'bed-1',
+              type: 'bed',
+              name: 'Giường ngủ',
+              category: 'bedroom',
+              price: 15_000_000,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const boq = calculateBoq(layout, { tier: 'standard' });
+    expect(boq.totalFloorArea).toBe(20);
+    expect(boq.totalNetWallArea).toBeCloseTo(52.155, 2);
+
+    const expectedFloorCost = Math.round(20 * BOQ_TIER_PRICES.standard.floorPerM2);
+    const expectedWallCost = Math.round(boq.totalNetWallArea * BOQ_TIER_PRICES.standard.wallPerM2);
+    const expectedFurnitureCost = 2_500_000 + 15_000_000;
+
+    expect(boq.totalFloorFinishingCost).toBe(expectedFloorCost);
+    expect(boq.totalWallFinishingCost).toBe(expectedWallCost);
+    expect(boq.totalFurnitureCost).toBe(expectedFurnitureCost);
+    expect(boq.totalBoqCost).toBe(expectedFurnitureCost + expectedFloorCost + expectedWallCost);
+  });
+
+  it('hỗ trợ 3 gói phân khúc (Tiết kiệm, Phổ thông, Cao cấp) và đơn giá tùy chỉnh', () => {
+    const layout = makeLayout({ width: 6, height: 5 });
+    const eco = calculateBoq(layout, { tier: 'economy' });
+    const std = calculateBoq(layout, { tier: 'standard' });
+    const prem = calculateBoq(layout, { tier: 'premium' });
+
+    expect(eco.floorPricePerM2).toBe(180_000);
+    expect(std.floorPricePerM2).toBe(350_000);
+    expect(prem.floorPricePerM2).toBe(750_000);
+    expect(eco.totalBoqCost).toBeLessThan(std.totalBoqCost);
+    expect(std.totalBoqCost).toBeLessThan(prem.totalBoqCost);
+
+    const custom = calculateBoq(layout, { customFloorPricePerM2: 600_000, customWallPricePerM2: 120_000 });
+    expect(custom.floorPricePerM2).toBe(600_000);
+    expect(custom.wallPricePerM2).toBe(120_000);
+  });
+
+  it('xuất file BOQ CSV có UTF-8 BOM và chuẩn tiếng Việt', () => {
+    const layout = makeLayout({ width: 5, height: 4 });
+    const csv = generateBoqCsv(layout, { tier: 'standard' });
+    expect(csv.startsWith(CSV_UTF8_BOM)).toBe(true);
+    expect(csv).toContain('STT,Hạng mục,Phòng,Số lượng,Đơn vị,Đơn giá (VNĐ),Thành tiền (VNĐ)');
+    expect(csv).toContain('Lát sàn hoàn thiện');
+    expect(csv).toContain('Sơn nước & hoàn thiện tường');
   });
 });

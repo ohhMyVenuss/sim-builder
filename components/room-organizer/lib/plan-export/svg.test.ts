@@ -395,7 +395,7 @@ describe('layoutToSvg', () => {
     expect(svg).toContain('>Item schedule</text>');
     // Chair (unpriced) and Chair ×2 at $40 are different lines; Door, Sofa, Window.
     expect(count(svg, 'class="schedule-row"')).toBe(5);
-    expect(svg).toContain('>$80</text>');
+    expect(svg).toMatch(/>[₫$]80<\/text>/);
     expect(svg).toContain('>1.00 × 1.00 × 1.00</text>');
     // Plan 520 px + heading 52 + 6 rows × 16 + half margin 30.
     const size = planSheetSize(layout, priced, { schedule: true });

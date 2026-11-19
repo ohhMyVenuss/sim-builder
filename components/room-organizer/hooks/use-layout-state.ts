@@ -12,6 +12,7 @@ import {
   useLayout,
   useLayoutActions,
 } from './use-layout-store';
+import type { DetectedOpening } from '../lib/blueprint-2d-to-3d';
 import type { DormerInput, DormerPatch } from '../lib/dormers';
 import type {
   CatalogItem,
@@ -95,6 +96,7 @@ export interface LayoutActions {
     width: number;
     depth: number;
     interiorWalls: readonly Omit<InteriorWall, 'id'>[];
+    openings?: readonly DetectedOpening[];
     mode: 'current-floor' | 'new-house';
     floorCount?: number;
     storeyHeightMeters?: number;

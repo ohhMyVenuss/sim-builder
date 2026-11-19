@@ -53,7 +53,7 @@ describe('Surprise respects the budget (#581)', () => {
   it('under the hard budget, the reducer accepts what Surprise generates', async () => {
     let accepted = 0;
     for (let seed = 0; seed < 20; seed++) {
-      const layout = houseWithLeft(200, true);
+      const layout = houseWithLeft(20_000_000, true);
       const state: LayoutState = { layout, activeFloorIndex: 0 };
       const outcome = await decideSurprise(layout, 0, DEFAULT_BUDGET, yes, seed);
       if (outcome === null || 'refusal' in outcome) continue;
@@ -69,7 +69,7 @@ describe('Surprise respects the budget (#581)', () => {
     const layout = houseWithLeft(5, true);
     const asked: string[] = [];
     const outcome = await decideSurprise(layout, 0, DEFAULT_BUDGET, recording(asked, () => true), 3);
-    expect(outcome).toEqual({ refusal: expect.stringMatching(/Over budget/) as unknown });
+    expect(outcome).toEqual({ refusal: expect.stringMatching(/Vượt ngân quỹ|Over budget/) as unknown });
     expect(asked).toEqual([]);
   });
 
@@ -88,7 +88,7 @@ describe('Surprise respects the budget (#581)', () => {
   });
 
   it('within budget, asks only whether to replace the furniture', async () => {
-    const layout = houseWithLeft(20_000, true);
+    const layout = houseWithLeft(200_000_000, true);
     const asked: string[] = [];
     const outcome = await decideSurprise(layout, 0, DEFAULT_BUDGET, recording(asked, () => true), 3);
     expect(asked).toEqual(['Replace the furniture on this floor with a surprise layout?']);
@@ -96,7 +96,7 @@ describe('Surprise respects the budget (#581)', () => {
   });
 
   it('declining the replace confirm cancels', async () => {
-    const layout = houseWithLeft(20_000, false);
+    const layout = houseWithLeft(200_000_000, false);
     expect(await decideSurprise(layout, 0, DEFAULT_BUDGET, () => Promise.resolve(false), 3)).toBeNull();
   });
 });
@@ -105,8 +105,8 @@ describe('Surprise does not count a legacy porch door (#600)', () => {
   it('spends the same budget with or without a priced porch door', () => {
     const door = makeItem({ id: ENTRANCE_DOOR_ID, type: 'door', category: 'structure', price: 320, width: 0.9, depth: 0.12, position: { x: 0, z: -4 } });
     const freeDoor = { ...door, price: 0 };
-    const withLegacy = makeLayout({ floors: [makeFloor({ items: [door] }), makeFloor({ id: 'upper', items: [filler(1500)] })] });
-    const withFree = makeLayout({ floors: [makeFloor({ items: [freeDoor] }), makeFloor({ id: 'upper', items: [filler(1500)] })] });
+    const withLegacy = makeLayout({ floors: [makeFloor({ items: [door] }), makeFloor({ id: 'upper', items: [filler(15_000_000)] })] });
+    const withFree = makeLayout({ floors: [makeFloor({ items: [freeDoor] }), makeFloor({ id: 'upper', items: [filler(15_000_000)] })] });
     for (let seed = 0; seed < 20; seed++) {
       const a = surpriseFloorItems(withLegacy, 0, DEFAULT_BUDGET, seed).filter((item) => item.id !== ENTRANCE_DOOR_ID);
       const b = surpriseFloorItems(withFree, 0, DEFAULT_BUDGET, seed).filter((item) => item.id !== ENTRANCE_DOOR_ID);
@@ -138,11 +138,11 @@ describe('runSurprise: the one place Surprise plays its cue (#581)', () => {
     expect(done).toBe(false);
     expect(cues).toEqual(['refused']);
     expect(replaced).toEqual([]);
-    expect(notices.map((notice) => [notice.tone, notice.message])).toEqual([['error', expect.stringMatching(/Over budget/) as unknown]]);
+    expect(notices.map((notice) => [notice.tone, notice.message])).toEqual([['error', expect.stringMatching(/Vượt ngân quỹ|Over budget/) as unknown]]);
   });
 
   it('an affordable surprise replaces the floor without a refusal', async () => {
-    const { done, cues, replaced, notices } = await run(houseWithLeft(20_000, true));
+    const { done, cues, replaced, notices } = await run(houseWithLeft(200_000_000, true));
     expect(done).toBe(true);
     expect(cues).toEqual([]);
     expect(replaced).toHaveLength(1);
@@ -152,7 +152,7 @@ describe('runSurprise: the one place Surprise plays its cue (#581)', () => {
 
 describe('runSurprise reads the house again after asking (#649 review)', () => {
   it('replaces nothing when the house changed while the question was open', async () => {
-    const layout = houseWithLeft(20_000, false);
+    const layout = houseWithLeft(200_000_000, false);
     const replaced: FurnitureItem[][] = [];
     const notices: Notice[] = [];
     const stop = subscribeNotices((notice) => notices.push(notice));

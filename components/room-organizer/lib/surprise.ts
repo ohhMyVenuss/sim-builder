@@ -1,5 +1,5 @@
 import { activeWriteOff, budgetBlockedReason, furnitureSpend, hardBudgetLoss, isHardBudgetOn, purchasePrice } from './budget';
-import { CURRENCY_SYMBOL, FURNITURE_CATALOG } from './constants';
+import { CURRENCY_SYMBOL, DEFAULT_BUDGET, FURNITURE_CATALOG } from './constants';
 import { notify } from './editor-notices';
 import { floorKeepOut } from './floor-keep-out';
 import { entersCutout } from './footprint';
@@ -64,7 +64,7 @@ export interface SurpriseOptions {
  * orchestrator can vary the seed each time the user clicks the button.
  */
 export function surpriseLayout(options: SurpriseOptions): FurnitureItem[] {
-  const { roomWidth, roomDepth, maxCost = 10_000, seed = Date.now() } = options;
+  const { roomWidth, roomDepth, maxCost = DEFAULT_BUDGET, seed = Date.now() } = options;
   const rng = mulberry32(seed >>> 0);
 
   // When the caller pins a seed the result must stay reproducible, so ids are

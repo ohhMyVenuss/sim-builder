@@ -2,7 +2,7 @@ import { MAX_ROOM_DIMENSION } from './constants';
 import { MAX_INTERIOR_WALLS_PER_FLOOR } from './schema';
 import type { InteriorWall } from './types';
 
-export type BlueprintSourceKind = 'dxf' | 'svg' | 'image';
+export type BlueprintSourceKind = 'dxf' | 'svg' | 'image' | 'pdf';
 
 export interface WallSegment2D {
   x1: number;
@@ -11,10 +11,20 @@ export interface WallSegment2D {
   z2: number;
 }
 
+export interface DetectedOpening {
+  type: 'door' | 'window';
+  x: number; // Tọa độ tâm 3D (mét, gốc giữa nhà)
+  z: number;
+  rotation: number; // Góc xoay (radians)
+  width: number; // Chiều rộng (mét)
+  height?: number | undefined; // Chiều cao (mét)
+}
+
 export interface Blueprint2DResult {
   width: number;
   depth: number;
   interiorWalls: ReadonlyArray<Omit<InteriorWall, 'id'>>;
+  openings?: ReadonlyArray<DetectedOpening>;
   sourceKind: BlueprintSourceKind;
   rawWidth: number;
   rawHeight: number;
@@ -22,13 +32,39 @@ export interface Blueprint2DResult {
   imageDataUrl?: string;
 }
 
+export interface CropROI {
+  x: number; // Tọa độ góc trên bên trái (0..1 hoặc pixel)
+  y: number;
+  width: number; // Chiều rộng vùng chọn
+  height: number; // Chiều cao vùng chọn
+}
+
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+export interface DxfLayerConfig {
+  wallLayers?: RegExp;
+  doorLayers?: RegExp;
+  windowLayers?: RegExp;
+  ignoreLayers?: RegExp;
+}
+
+export const DEFAULT_DXF_LAYER_CONFIG: DxfLayerConfig = {
+  wallLayers: /wall|tuong|kien_truc|arch|column|struc/i,
+  doorLayers: /door|cua|cua_di|swing/i,
+  windowLayers: /window|cuaso|cua_so|glaz/i,
+  ignoreLayers: /dim|text|title|khung|ghi_chu|note|anno|hatch|center/i,
+};
+
 const MIN_HOUSE_DIM = 2;
 const MAX_IMPORT_DIM = Math.min(40, MAX_ROOM_DIMENSION);
 const MIN_WALL_LENGTH_M = 0.35;
 const EXTERIOR_EDGE_TOLERANCE_M = 0.28;
 const ENDPOINT_SNAP_M = 0.25;
 
-function round2(n: number): number {
+export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
@@ -37,6 +73,45 @@ function clampHouseDims(width: number, depth: number): { width: number; depth: n
     width: round2(Math.max(MIN_HOUSE_DIM, Math.min(MAX_IMPORT_DIM, width))),
     depth: round2(Math.max(MIN_HOUSE_DIM, Math.min(MAX_IMPORT_DIM, depth))),
   };
+}
+
+/**
+ * Hiệu chỉnh tỷ lệ bản vẽ bằng 2 điểm click chọn và khoảng cách thực tế (mét).
+ * Trả về hệ số quy đổi mét trên pixel (metersPerPixel).
+ */
+export function calibrateScale2D(p1: Point2D, p2: Point2D, realDistanceMeters: number): number {
+  const pixelDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+  if (pixelDist <= 0 || !Number.isFinite(pixelDist) || realDistanceMeters <= 0 || !Number.isFinite(realDistanceMeters)) {
+    throw new Error('Khoảng cách pixel hoặc khoảng cách thực tế không hợp lệ.');
+  }
+  return realDistanceMeters / pixelDist;
+}
+
+/**
+ * Cắt vùng đệm pixel ảnh theo khung chọn ROI (Region of Interest) để loại bỏ khung tên và đường gióng.
+ */
+export function cropImagePixels(
+  pixels: { data: Uint8ClampedArray; width: number; height: number },
+  roi: CropROI
+): { data: Uint8ClampedArray; width: number; height: number } {
+  const { data, width: imgW, height: imgH } = pixels;
+  if (imgW <= 0 || imgH <= 0 || data.length === 0) return pixels;
+
+  // Hỗ trợ tọa độ chuẩn hóa 0..1 hoặc pixel trực tiếp
+  const isNorm = roi.x <= 1 && roi.y <= 1 && roi.width <= 1 && roi.height <= 1;
+  const rx = Math.max(0, Math.min(imgW - 1, Math.round(isNorm ? roi.x * imgW : roi.x)));
+  const ry = Math.max(0, Math.min(imgH - 1, Math.round(isNorm ? roi.y * imgH : roi.y)));
+  const rw = Math.max(1, Math.min(imgW - rx, Math.round(isNorm ? roi.width * imgW : roi.width)));
+  const rh = Math.max(1, Math.min(imgH - ry, Math.round(isNorm ? roi.height * imgH : roi.height)));
+
+  const out = new Uint8ClampedArray(rw * rh * 4);
+  for (let y = 0; y < rh; y++) {
+    const srcRowStart = ((ry + y) * imgW + rx) * 4;
+    const dstRowStart = y * rw * 4;
+    out.set(data.subarray(srcRowStart, srcRowStart + rw * 4), dstRowStart);
+  }
+
+  return { data: out, width: rw, height: rh };
 }
 
 /** Remove segments that lie directly on the exterior shell boundary. */
@@ -113,18 +188,20 @@ function snapAndCleanSegments(
   return result;
 }
 
-/** Normalize raw 2D segments into centred metres of size (width × depth). */
-function normalizeSegments(
+/** Normalize raw 2D segments and openings into centred metres of size (width × depth). */
+function normalizeSegmentsAndOpenings(
   segments: readonly WallSegment2D[],
+  openings: readonly DetectedOpening[] = [],
   targetWidthMeters?: number,
   unitScale = 1
 ): Blueprint2DResult {
-  if (segments.length === 0) {
+  if (segments.length === 0 && openings.length === 0) {
     const w = targetWidthMeters && targetWidthMeters >= MIN_HOUSE_DIM ? targetWidthMeters : 10;
     return {
       width: round2(Math.min(MAX_IMPORT_DIM, w)),
       depth: round2(Math.min(MAX_IMPORT_DIM, w * 0.8)),
       interiorWalls: [],
+      openings: [],
       sourceKind: 'dxf',
       rawWidth: 0,
       rawHeight: 0,
@@ -135,11 +212,21 @@ function normalizeSegments(
   let maxX = -Infinity;
   let minZ = Infinity;
   let maxZ = -Infinity;
-  for (const s of segments) {
-    minX = Math.min(minX, s.x1, s.x2);
-    maxX = Math.max(maxX, s.x1, s.x2);
-    minZ = Math.min(minZ, s.z1, s.z2);
-    maxZ = Math.max(maxZ, s.z1, s.z2);
+
+  if (segments.length > 0) {
+    for (const s of segments) {
+      minX = Math.min(minX, s.x1, s.x2);
+      maxX = Math.max(maxX, s.x1, s.x2);
+      minZ = Math.min(minZ, s.z1, s.z2);
+      maxZ = Math.max(maxZ, s.z1, s.z2);
+    }
+  } else {
+    for (const op of openings) {
+      minX = Math.min(minX, op.x);
+      maxX = Math.max(maxX, op.x);
+      minZ = Math.min(minZ, op.z);
+      maxZ = Math.max(maxZ, op.z);
+    }
   }
 
   const rawW = Math.max(1e-6, maxX - minX);
@@ -167,10 +254,20 @@ function normalizeSegments(
     z2: (s.z2 - cz) * effectiveScale,
   }));
 
+  const scaledOpenings: DetectedOpening[] = openings.map((op) => ({
+    type: op.type,
+    x: round2((op.x - cx) * effectiveScale),
+    z: round2((op.z - cz) * effectiveScale),
+    rotation: round2(op.rotation),
+    width: round2(Math.max(0.6, op.width * effectiveScale)),
+    ...(op.height !== undefined ? { height: op.height } : {}),
+  }));
+
   return {
     width,
     depth,
     interiorWalls: snapAndCleanSegments(scaled, width, depth),
+    openings: scaledOpenings,
     sourceKind: 'dxf',
     rawWidth: rawW,
     rawHeight: rawH,
@@ -178,10 +275,14 @@ function normalizeSegments(
 }
 
 // ---------------------------------------------------------------------------
-// 1. DXF Parser (LINE, LWPOLYLINE, POLYLINE)
+// 1. DXF Parser với Layer Classification (WALL, DOOR, WINDOW)
 // ---------------------------------------------------------------------------
 
-export function parseDxfToBlueprint(dxfText: string, targetWidthMeters?: number): Blueprint2DResult {
+export function parseDxfToBlueprint(
+  dxfText: string,
+  targetWidthMeters?: number,
+  layerConfig: DxfLayerConfig = DEFAULT_DXF_LAYER_CONFIG
+): Blueprint2DResult {
   const lines = dxfText.split(/\r?\n/);
   const pairs: Array<{ code: number; value: string }> = [];
   for (let i = 0; i + 1 < lines.length; i += 2) {
@@ -193,33 +294,112 @@ export function parseDxfToBlueprint(dxfText: string, targetWidthMeters?: number)
   let insunits = 0;
   let inEntities = false;
   let entityType = '';
+  let currentLayer = '0';
   let x1 = 0;
   let y1 = 0;
   let x2 = 0;
   let y2 = 0;
+  let centerX = 0;
+  let centerY = 0;
+  let radius = 0;
+  let startAngle = 0;
   let polyPoints: Array<{ x: number; y: number }> = [];
   let polyClosed = false;
   let currentPolyX: number | null = null;
-  const segments: WallSegment2D[] = [];
+
+  const wallSegments: WallSegment2D[] = [];
+  const detectedOpenings: DetectedOpening[] = [];
+
+  const wallRe = layerConfig.wallLayers ?? DEFAULT_DXF_LAYER_CONFIG.wallLayers!;
+  const doorRe = layerConfig.doorLayers ?? DEFAULT_DXF_LAYER_CONFIG.doorLayers!;
+  const windowRe = layerConfig.windowLayers ?? DEFAULT_DXF_LAYER_CONFIG.windowLayers!;
+  const ignoreRe = layerConfig.ignoreLayers ?? DEFAULT_DXF_LAYER_CONFIG.ignoreLayers!;
 
   const flushEntity = () => {
+    if (!entityType || ignoreRe.test(currentLayer)) {
+      entityType = '';
+      polyPoints = [];
+      polyClosed = false;
+      currentPolyX = null;
+      return;
+    }
+
+    const isDoorLayer = doorRe.test(currentLayer);
+    const isWindowLayer = windowRe.test(currentLayer);
+    const isWallLayer = wallRe.test(currentLayer) || (!isDoorLayer && !isWindowLayer);
+
     if (entityType === 'LINE') {
-      segments.push({ x1, z1: -y1, x2, z2: -y2 });
-    } else if (entityType === 'LWPOLYLINE' && polyPoints.length >= 2) {
-      for (let i = 0; i + 1 < polyPoints.length; i++) {
-        segments.push({
-          x1: polyPoints[i]!.x,
-          z1: -polyPoints[i]!.y,
-          x2: polyPoints[i + 1]!.x,
-          z2: -polyPoints[i + 1]!.y,
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      if (isDoorLayer) {
+        // Cửa trên layer DOOR
+        const midX = (x1 + x2) / 2;
+        const midZ = -(y1 + y2) / 2;
+        const rot = Math.atan2(-(y2 - y1), x2 - x1);
+        detectedOpenings.push({
+          type: 'door',
+          x: midX,
+          z: midZ,
+          rotation: rot,
+          width: len,
+        });
+      } else if (isWindowLayer) {
+        // Cửa sổ trên layer WINDOW
+        const midX = (x1 + x2) / 2;
+        const midZ = -(y1 + y2) / 2;
+        const rot = Math.atan2(-(y2 - y1), x2 - x1);
+        detectedOpenings.push({
+          type: 'window',
+          x: midX,
+          z: midZ,
+          rotation: rot,
+          width: len,
+        });
+      } else if (isWallLayer) {
+        // Mặc định hoặc layer WALL
+        wallSegments.push({ x1, z1: -y1, x2, z2: -y2 });
+      }
+    } else if (entityType === 'ARC') {
+      // Ký hiệu cung tròn mở cửa (Door swing arc)
+      if (isDoorLayer || (radius >= 0.5 && radius <= 1.5)) {
+        detectedOpenings.push({
+          type: 'door',
+          x: centerX,
+          z: -centerY,
+          rotation: (startAngle * Math.PI) / 180,
+          width: radius,
         });
       }
-      if (polyClosed && polyPoints.length >= 3) {
-        const first = polyPoints[0]!;
-        const last = polyPoints[polyPoints.length - 1]!;
-        segments.push({ x1: last.x, z1: -last.y, x2: first.x, z2: -first.y });
+    } else if (entityType === 'LWPOLYLINE' && polyPoints.length >= 2) {
+      if (isDoorLayer || isWindowLayer) {
+        const type = isDoorLayer ? 'door' : 'window';
+        for (let i = 0; i + 1 < polyPoints.length; i++) {
+          const p1 = polyPoints[i]!;
+          const p2 = polyPoints[i + 1]!;
+          detectedOpenings.push({
+            type,
+            x: (p1.x + p2.x) / 2,
+            z: -(p1.y + p2.y) / 2,
+            rotation: Math.atan2(-(p2.y - p1.y), p2.x - p1.x),
+            width: Math.hypot(p2.x - p1.x, p2.y - p1.y),
+          });
+        }
+      } else {
+        for (let i = 0; i + 1 < polyPoints.length; i++) {
+          wallSegments.push({
+            x1: polyPoints[i]!.x,
+            z1: -polyPoints[i]!.y,
+            x2: polyPoints[i + 1]!.x,
+            z2: -polyPoints[i + 1]!.y,
+          });
+        }
+        if (polyClosed && polyPoints.length >= 3) {
+          const first = polyPoints[0]!;
+          const last = polyPoints[polyPoints.length - 1]!;
+          wallSegments.push({ x1: last.x, z1: -last.y, x2: first.x, z2: -first.y });
+        }
       }
     }
+
     entityType = '';
     polyPoints = [];
     polyClosed = false;
@@ -250,6 +430,16 @@ export function parseDxfToBlueprint(dxfText: string, targetWidthMeters?: number)
       y1 = 0;
       x2 = 0;
       y2 = 0;
+      centerX = 0;
+      centerY = 0;
+      radius = 0;
+      startAngle = 0;
+      currentLayer = '0';
+      continue;
+    }
+
+    if (code === 8) {
+      currentLayer = value;
       continue;
     }
 
@@ -260,6 +450,13 @@ export function parseDxfToBlueprint(dxfText: string, targetWidthMeters?: number)
       else if (code === 20) y1 = num;
       else if (code === 11) x2 = num;
       else if (code === 21) y2 = num;
+    } else if (entityType === 'ARC') {
+      const num = Number.parseFloat(value);
+      if (!Number.isFinite(num)) continue;
+      if (code === 10) centerX = num;
+      else if (code === 20) centerY = num;
+      else if (code === 40) radius = num;
+      else if (code === 50) startAngle = num;
     } else if (entityType === 'LWPOLYLINE') {
       if (code === 70) {
         polyClosed = (Number.parseInt(value, 10) & 1) === 1;
@@ -277,27 +474,27 @@ export function parseDxfToBlueprint(dxfText: string, targetWidthMeters?: number)
   }
   flushEntity();
 
-  // Determine unit scale from $INSUNITS or magnitude heuristic.
+  // Đơn vị quy đổi
   let unitScale = 1;
   if (insunits === 4) unitScale = 0.001; // mm
   else if (insunits === 5) unitScale = 0.01; // cm
-  else if (insunits === 1) unitScale = 0.0254; // inches
-  else if (insunits === 2) unitScale = 0.3048; // feet
-  else if (segments.length > 0) {
-    let maxSpan = 0;
+  else if (insunits === 1) unitScale = 0.0254; // inch
+  else if (insunits === 2) unitScale = 0.3048; // foot
+  else if (wallSegments.length > 0) {
     let minX = Infinity;
     let maxX = -Infinity;
-    for (const s of segments) {
+    for (const s of wallSegments) {
       minX = Math.min(minX, s.x1, s.x2);
       maxX = Math.max(maxX, s.x1, s.x2);
     }
-    maxSpan = maxX - minX;
+    const maxSpan = maxX - minX;
     if (maxSpan > 500) unitScale = 0.001;
     else if (maxSpan > 60) unitScale = 0.01;
   }
 
+  const result = normalizeSegmentsAndOpenings(wallSegments, detectedOpenings, targetWidthMeters, unitScale);
   return {
-    ...normalizeSegments(segments, targetWidthMeters, unitScale),
+    ...result,
     sourceKind: 'dxf',
   };
 }
@@ -372,16 +569,15 @@ export function parseSvgToBlueprint(svgText: string, targetWidthMeters = 10): Bl
   }
 
   return {
-    ...normalizeSegments(segments, targetWidthMeters, 1),
+    ...normalizeSegmentsAndOpenings(segments, [], targetWidthMeters, 1),
     sourceKind: 'svg',
   };
 }
 
 // ---------------------------------------------------------------------------
-// 3. Raster Image 2D Wall Extractor (Otsu Threshold + Run-Length + Merge)
+// 3. Raster Image & PDF Parser (ROI Crop, Otsu, Hough/Diagonal Walls, Openings)
 // ---------------------------------------------------------------------------
 
-/** Compute optimal binary threshold via Otsu's between-class variance maximization. */
 export function computeOtsuThreshold(luminance: Uint8Array): { threshold: number; darkForeground: boolean } {
   const hist = new Int32Array(256);
   for (let i = 0; i < luminance.length; i++) {
@@ -413,14 +609,13 @@ export function computeOtsuThreshold(luminance: Uint8Array): { threshold: number
     }
   }
 
-  // If more than 55% of pixels are dark, assume white-on-dark blueprint.
   let darkCount = 0;
   for (let t = 0; t <= threshold; t++) darkCount += hist[t]!;
   return { threshold, darkForeground: darkCount <= total * 0.55 };
 }
 
 interface RawRun {
-  pos: number; // y for horizontal, x for vertical
+  pos: number;
   start: number;
   end: number;
 }
@@ -435,7 +630,6 @@ function mergeParallelRuns(runs: readonly RawRun[], posGap: number, spanGap: num
     for (let i = clusters.length - 1; i >= 0; i--) {
       const c = clusters[i]!;
       if (r.pos - c.maxPos > posGap) break;
-      // Check overlap or near-touch along the run axis.
       if (r.start <= c.end + spanGap && r.end >= c.start - spanGap) {
         c.posSum += r.pos;
         c.count += 1;
@@ -458,14 +652,21 @@ function mergeParallelRuns(runs: readonly RawRun[], posGap: number, spanGap: num
   }));
 }
 
+/**
+ * Trích xuất tường ngang, tường dọc, tường chéo và cửa đi/cửa sổ từ pixel bản vẽ 2D.
+ */
 export function extractWallsFromImagePixels(
   pixels: { data: Uint8ClampedArray; width: number; height: number },
-  targetWidthMeters = 10
+  targetWidthMeters = 10,
+  roi?: CropROI
 ): Blueprint2DResult {
-  const { data, width: imgW, height: imgH } = pixels;
+  // Áp dụng ROI crop trước khi phân tích nếu có yêu cầu
+  const activePixels = roi ? cropImagePixels(pixels, roi) : pixels;
+  const { data, width: imgW, height: imgH } = activePixels;
   const total = imgW * imgH;
+
   if (total === 0) {
-    return { width: 10, depth: 8, interiorWalls: [], sourceKind: 'image', rawWidth: 0, rawHeight: 0 };
+    return { width: 10, depth: 8, interiorWalls: [], openings: [], sourceKind: 'image', rawWidth: 0, rawHeight: 0 };
   }
 
   const lum = new Uint8Array(total);
@@ -491,7 +692,7 @@ export function extractWallsFromImagePixels(
     }
   }
 
-  // Find bounding box of foreground content (ignore tiny border noise).
+  // Xác định bounding box của nội dung mặt bằng
   const minRowFg = Math.max(2, Math.floor(imgW * 0.01));
   const minColFg = Math.max(2, Math.floor(imgH * 0.01));
   let minY = 0;
@@ -507,8 +708,9 @@ export function extractWallsFromImagePixels(
   const contentH = Math.max(1, maxY - minY + 1);
   const minRunH = Math.max(6, Math.round(contentW * 0.06));
   const minRunV = Math.max(6, Math.round(contentH * 0.06));
-  const maxGap = 2; // Bridge 1-2px gaps in scanned drawings.
+  const maxGap = 2;
 
+  // 1. Quét đoạn thẳng ngang (Horizontal)
   const hRuns: RawRun[] = [];
   for (let y = minY; y <= maxY; y++) {
     let runStart = -1;
@@ -533,6 +735,7 @@ export function extractWallsFromImagePixels(
     }
   }
 
+  // 2. Quét đoạn thẳng dọc (Vertical)
   const vRuns: RawRun[] = [];
   for (let x = minX; x <= maxX; x++) {
     let runStart = -1;
@@ -557,6 +760,64 @@ export function extractWallsFromImagePixels(
     }
   }
 
+  // 3. Quét tường chéo (Diagonal / angled walls ~45° và ~135°)
+  const diagonalSegments: WallSegment2D[] = [];
+  const minDiagLen = Math.max(8, Math.round(Math.hypot(contentW, contentH) * 0.05));
+
+  // Chéo 1: x + y = const (góc 135° / -45°)
+  for (let d = minX + minY; d <= maxX + maxY; d += 4) {
+    let dStart = -1;
+    let dGap = 0;
+    const startX = Math.max(minX, d - maxY);
+    const endX = Math.min(maxX, d - minY);
+    for (let x = startX; x <= endX; x++) {
+      const y = d - x;
+      if (mask[y * imgW + x] === 1) {
+        if (dStart < 0) dStart = x;
+        dGap = 0;
+      } else if (dStart >= 0) {
+        dGap++;
+        if (dGap > maxGap) {
+          const xEnd = x - dGap;
+          const yEnd = d - xEnd;
+          const yStart = d - dStart;
+          if (Math.hypot(xEnd - dStart, yEnd - yStart) >= minDiagLen) {
+            diagonalSegments.push({ x1: dStart, z1: yStart, x2: xEnd, z2: yEnd });
+          }
+          dStart = -1;
+          dGap = 0;
+        }
+      }
+    }
+  }
+
+  // Chéo 2: x - y = const (góc 45°)
+  for (let d = minX - maxY; d <= maxX - minY; d += 4) {
+    let dStart = -1;
+    let dGap = 0;
+    const startX = Math.max(minX, minY + d);
+    const endX = Math.min(maxX, maxY + d);
+    for (let x = startX; x <= endX; x++) {
+      const y = x - d;
+      if (mask[y * imgW + x] === 1) {
+        if (dStart < 0) dStart = x;
+        dGap = 0;
+      } else if (dStart >= 0) {
+        dGap++;
+        if (dGap > maxGap) {
+          const xEnd = x - dGap;
+          const yEnd = xEnd - d;
+          const yStart = dStart - d;
+          if (Math.hypot(xEnd - dStart, yEnd - yStart) >= minDiagLen) {
+            diagonalSegments.push({ x1: dStart, z1: yStart, x2: xEnd, z2: yEnd });
+          }
+          dStart = -1;
+          dGap = 0;
+        }
+      }
+    }
+  }
+
   const thicknessTol = Math.max(4, Math.round(Math.max(contentW, contentH) * 0.025));
   const spanTol = Math.max(4, Math.round(Math.max(contentW, contentH) * 0.02));
   const mergedH = mergeParallelRuns(hRuns, thicknessTol, spanTol);
@@ -565,9 +826,11 @@ export function extractWallsFromImagePixels(
   const segments: WallSegment2D[] = [
     ...mergedH.map((r) => ({ x1: r.start, z1: r.pos, x2: r.end, z2: r.pos })),
     ...mergedV.map((r) => ({ x1: r.pos, z1: r.start, x2: r.pos, z2: r.end })),
+    ...diagonalSegments,
   ];
 
-  // Ensure bounding box matches contentW × contentH even if no interior walls were detected.
+  // 4. Nhận diện cửa đi & cửa sổ (Wall Openings) từ các khoảng hở giữa tường
+  const detectedOpenings: DetectedOpening[] = [];
   const { width, depth } = clampHouseDims(
     targetWidthMeters,
     targetWidthMeters * (contentH / contentW)
@@ -575,6 +838,68 @@ export function extractWallsFromImagePixels(
   const scale = width / contentW;
   const cx = (minX + maxX) / 2;
   const cz = (minY + maxY) / 2;
+
+  // Tìm khoảng hở tiêu chuẩn (0.7m - 1.2m cho cửa đi, 0.8m - 2.5m cho cửa sổ) giữa các đoạn tường ngang
+  for (let i = 0; i < mergedH.length; i++) {
+    for (let j = i + 1; j < mergedH.length; j++) {
+      const w1 = mergedH[i]!;
+      const w2 = mergedH[j]!;
+      if (Math.abs(w1.pos - w2.pos) <= thicknessTol) {
+        const gapDist = Math.min(Math.abs(w2.start - w1.end), Math.abs(w1.start - w2.end));
+        const gapMeters = gapDist * scale;
+        if (gapMeters >= 0.7 && gapMeters <= 1.2) {
+          const midX = (Math.min(w1.end, w2.end) + Math.max(w1.start, w2.start)) / 2;
+          detectedOpenings.push({
+            type: 'door',
+            x: (midX - cx) * scale,
+            z: (w1.pos - cz) * scale,
+            rotation: 0,
+            width: round2(gapMeters),
+          });
+        } else if (gapMeters > 1.2 && gapMeters <= 2.5) {
+          const midX = (Math.min(w1.end, w2.end) + Math.max(w1.start, w2.start)) / 2;
+          detectedOpenings.push({
+            type: 'window',
+            x: (midX - cx) * scale,
+            z: (w1.pos - cz) * scale,
+            rotation: 0,
+            width: round2(gapMeters),
+          });
+        }
+      }
+    }
+  }
+
+  // Tương tự cho tường dọc
+  for (let i = 0; i < mergedV.length; i++) {
+    for (let j = i + 1; j < mergedV.length; j++) {
+      const w1 = mergedV[i]!;
+      const w2 = mergedV[j]!;
+      if (Math.abs(w1.pos - w2.pos) <= thicknessTol) {
+        const gapDist = Math.min(Math.abs(w2.start - w1.end), Math.abs(w1.start - w2.end));
+        const gapMeters = gapDist * scale;
+        if (gapMeters >= 0.7 && gapMeters <= 1.2) {
+          const midZ = (Math.min(w1.end, w2.end) + Math.max(w1.start, w2.start)) / 2;
+          detectedOpenings.push({
+            type: 'door',
+            x: (w1.pos - cx) * scale,
+            z: (midZ - cz) * scale,
+            rotation: Math.PI / 2,
+            width: round2(gapMeters),
+          });
+        } else if (gapMeters > 1.2 && gapMeters <= 2.5) {
+          const midZ = (Math.min(w1.end, w2.end) + Math.max(w1.start, w2.start)) / 2;
+          detectedOpenings.push({
+            type: 'window',
+            x: (w1.pos - cx) * scale,
+            z: (midZ - cz) * scale,
+            rotation: Math.PI / 2,
+            width: round2(gapMeters),
+          });
+        }
+      }
+    }
+  }
 
   const worldSegments = segments.map((s) => ({
     x1: (s.x1 - cx) * scale,
@@ -587,25 +912,77 @@ export function extractWallsFromImagePixels(
     width,
     depth,
     interiorWalls: snapAndCleanSegments(worldSegments, width, depth),
+    openings: detectedOpenings,
     sourceKind: 'image',
     rawWidth: contentW,
     rawHeight: contentH,
   };
 }
 
-/** Browser helper: load a 2D technical drawing file (DXF, SVG, or PNG/JPG/WebP) and reconstruct 3D walls. */
-export async function analyzeBlueprintFile(file: File, targetWidthMeters = 10): Promise<Blueprint2DResult> {
+/**
+ * Render trang PDF đầu tiên ra Canvas2D để phục vụ trích xuất tường và mở cửa.
+ */
+export async function renderPdfToCanvas(
+  pdfBuffer: ArrayBuffer,
+  pageNumber = 1
+): Promise<{ canvas: HTMLCanvasElement; width: number; height: number; dataUrl: string }> {
+  const pdfjs = await import('pdfjs-dist');
+  if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+  }
+
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(pdfBuffer) });
+  const doc = await loadingTask.promise;
+  const page = await doc.getPage(pageNumber);
+  const viewport = page.getViewport({ scale: 2.0 });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(viewport.width);
+  canvas.height = Math.round(viewport.height);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('Không thể khởi tạo Canvas 2D để hiển thị PDF.');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const renderContext = { canvasContext: ctx, viewport } as unknown as Parameters<typeof page.render>[0];
+  await page.render(renderContext).promise;
+  const dataUrl = canvas.toDataURL('image/png');
+  return { canvas, width: canvas.width, height: canvas.height, dataUrl };
+}
+
+/**
+ * Phân tích file bản vẽ kỹ thuật (DXF, SVG, PNG/JPG/WebP hoặc PDF) và tự động dựng mô hình 3D.
+ */
+export async function analyzeBlueprintFile(
+  file: File,
+  targetWidthMeters = 10,
+  options?: { roi?: CropROI }
+): Promise<Blueprint2DResult> {
   const lower = file.name.toLowerCase();
+
   if (lower.endsWith('.dxf')) {
     const text = await file.text();
     return parseDxfToBlueprint(text, targetWidthMeters > 0 ? targetWidthMeters : undefined);
   }
+
   if (lower.endsWith('.svg') || file.type === 'image/svg+xml') {
     const text = await file.text();
     return parseSvgToBlueprint(text, targetWidthMeters);
   }
+
+  if (lower.endsWith('.pdf') || file.type === 'application/pdf') {
+    const buffer = await file.arrayBuffer();
+    const { canvas, width: w, height: h, dataUrl } = await renderPdfToCanvas(buffer);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) throw new Error('Trình duyệt không hỗ trợ Canvas 2D để phân tích PDF.');
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const result = extractWallsFromImagePixels(imageData, targetWidthMeters, options?.roi);
+    return { ...result, sourceKind: 'pdf', imageDataUrl: dataUrl };
+  }
+
   if (!file.type.startsWith('image/')) {
-    throw new Error('Vui lòng chọn file bản vẽ 2D hợp lệ (.png, .jpg, .webp, .svg hoặc .dxf).');
+    throw new Error('Vui lòng chọn file bản vẽ 2D hợp lệ (.png, .jpg, .webp, .svg, .dxf hoặc .pdf).');
   }
 
   const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -636,6 +1013,6 @@ export async function analyzeBlueprintFile(file: File, targetWidthMeters = 10): 
   ctx.drawImage(img, 0, 0, w, h);
   const imageData = ctx.getImageData(0, 0, w, h);
 
-  const result = extractWallsFromImagePixels(imageData, targetWidthMeters);
+  const result = extractWallsFromImagePixels(imageData, targetWidthMeters, options?.roi);
   return { ...result, imageDataUrl: dataUrl };
 }

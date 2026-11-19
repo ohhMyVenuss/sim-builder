@@ -1,13 +1,26 @@
 'use client';
 
+import {
+  FileSpreadsheet,
+  Printer,
+  Wallet,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useRoomEditor } from '../contexts';
 import { useActiveFloorIndex, useLayout } from '../hooks/use-layout-store';
-import { budgetLimit, budgetSpent, furnitureSpend, isHardBudgetOn } from '../lib/budget';
+import {
+  BOQ_TIER_LABELS,
+  BOQ_TIER_PRICES,
+  calculateBoq,
+  generateBoqHtml,
+  type BoqTier,
+} from '../lib/boq';
+import { budgetLimit, furnitureSpend, isHardBudgetOn } from '../lib/budget';
 import { CATEGORIES } from '../lib/constants';
+import { downloadBoqCsv } from '../lib/file-io';
 import { buildingArea } from '../lib/footprint';
 import { formatVnd } from '../lib/format';
 import { footprintArea, itemCountByCategory } from '../lib/geometry';
@@ -18,7 +31,6 @@ import { zoneContains, zoneStats } from '../lib/zones';
 import { Icon, iconForItem } from '../plotcraft/icon';
 
 export function StatisticsPanel(): JSX.Element {
-  // `layout` from the store selector; `collidingIds` stays on the context.
   const layout = useLayout();
   const locale = useLocale();
   const statsCopy = UI_TEXT[locale].stats;
@@ -26,22 +38,25 @@ export function StatisticsPanel(): JSX.Element {
   const budget = budgetLimit(layout);
   const hardBudget = isHardBudgetOn(layout);
   const [budgetInputM, setBudgetInputM] = useState<string>(() => String(Math.round(budget / 1_000_000)));
-  // Collisions are checked on the active floor only; everything else here
-  // covers the whole house, and the labels say which is which (#438).
+
+  // BOQ State
+  const [boqTier, setBoqTier] = useState<BoqTier>('standard');
+  const [customFloorPrice, setCustomFloorPrice] = useState<string>(() =>
+    String(BOQ_TIER_PRICES.standard.floorPerM2)
+  );
+  const [customWallPrice, setCustomWallPrice] = useState<string>(() =>
+    String(BOQ_TIER_PRICES.standard.wallPerM2)
+  );
+
   const collisionsOnActiveFloor = collidingIds.size;
   const activeFloorIndex = useActiveFloorIndex();
-  const activeFloorName = layout.floors[activeFloorIndex]?.name ?? 'this floor';
+  const activeFloorName = layout.floors[activeFloorIndex]?.name ?? 'tầng hiện tại';
 
-  // The porch door is structure, not furniture (#382).
   const allItems = useMemo(
     () => layout.floors.flatMap((floor) => floor.items).filter((item) => item.id !== ENTRANCE_DOOR_ID),
     [layout.floors]
   );
 
-  // What the header and the library cards show: under the hard budget it
-  // includes the write-off of what was sold back (#463e).
-  const cost = budgetSpent(layout);
-  // Per floor: a lamp upstairs doesn't stand on the desk below it (#462).
   const footprint = useMemo(
     () => layout.floors.reduce((sum, floor) => sum + footprintArea(floor.items), 0),
     [layout.floors]
@@ -50,10 +65,48 @@ export function StatisticsPanel(): JSX.Element {
   const totalArea = roomArea * layout.floors.length;
   const density = totalArea > 0 ? Math.min(100, (footprint / totalArea) * 100) : 0;
   const counts = useMemo(() => itemCountByCategory(allItems), [allItems]);
-  const budgetUsedRatio = budget > 0 ? Math.min(1, cost / budget) : 0;
-  const overBudget = cost > budget;
-  // Per-room cost / count / area from the zones drawn on each floor (#155);
-  // the floor name only disambiguates once there is more than one floor.
+
+  // BOQ calculation
+  const parsedFloorPrice = Number.parseFloat(customFloorPrice);
+  const parsedWallPrice = Number.parseFloat(customWallPrice);
+  const boqOptions = useMemo(() => {
+    const opts: { tier?: BoqTier; customFloorPricePerM2?: number; customWallPricePerM2?: number } = { tier: boqTier };
+    if (Number.isFinite(parsedFloorPrice)) opts.customFloorPricePerM2 = parsedFloorPrice;
+    if (Number.isFinite(parsedWallPrice)) opts.customWallPricePerM2 = parsedWallPrice;
+    return opts;
+  }, [boqTier, parsedFloorPrice, parsedWallPrice]);
+
+  const boq = useMemo(() => {
+    return calculateBoq(layout, boqOptions);
+  }, [layout, boqOptions]);
+
+  const totalBoqCost = boq.totalBoqCost;
+  const budgetUsedRatio = budget > 0 ? Math.min(1, totalBoqCost / budget) : 0;
+  const overBudget = totalBoqCost > budget;
+
+  const handleTierChange = (tier: BoqTier) => {
+    setBoqTier(tier);
+    setCustomFloorPrice(String(BOQ_TIER_PRICES[tier].floorPerM2));
+    setCustomWallPrice(String(BOQ_TIER_PRICES[tier].wallPerM2));
+  };
+
+  const handleExportBoqCsv = () => {
+    downloadBoqCsv(layout, boqOptions);
+  };
+
+  const handlePrintBoqPdf = () => {
+    const html = generateBoqHtml(layout, boqOptions);
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
   const zoneRows = useMemo(
     () =>
       layout.floors.flatMap((floor, index) =>
@@ -66,14 +119,15 @@ export function StatisticsPanel(): JSX.Element {
       ),
     [layout]
   );
-  // The rooms the walls close on each floor (#719), named after the zone
-  // over them. A floor with no partitions is one room, which says nothing.
+
   const roomRows = useMemo(
     () =>
       layout.floors.flatMap((floor, index) => {
         if (!floor.interiorWalls?.some((wall) => wall.id !== ENTRANCE_WALL_ID)) return [];
         return floorRooms(layout, index).map((room, roomIndex) => {
-          const name = floor.zones?.find((zone) => zoneContains(zone, room.anchor.x, room.anchor.z))?.name ?? `Room ${roomIndex + 1}`;
+          const name =
+            floor.zones?.find((zone) => zoneContains(zone, room.anchor.x, room.anchor.z))?.name ??
+            `Room ${roomIndex + 1}`;
           return {
             key: `${floor.id}:${roomIndex}`,
             label: layout.floors.length > 1 ? `${name} · ${floor.name}` : name,
@@ -105,16 +159,20 @@ export function StatisticsPanel(): JSX.Element {
 
         {collisionsOnActiveFloor > 0 && (
           <StatRow label={`Va chạm (${activeFloorName})`} highlight>
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 text-red-600">
               <Icon name="warn" size={13} />
-              {collisionsOnActiveFloor}
+              <span>{collisionsOnActiveFloor}</span>
             </span>
           </StatRow>
         )}
 
-        <div className="pt-2 border-t space-y-2">
+        {/* BẢNG DỰ TOÁN HOÀN THIỆN (BOQ) */}
+        <div className="pt-2 border-t space-y-2.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground font-medium">Dự toán nội thất (VNĐ)</span>
+            <span className="text-foreground font-semibold flex items-center gap-1.5">
+              <Wallet className="w-3.5 h-3.5 text-primary" />
+              <span>Bảng dự toán hoàn thiện (BOQ)</span>
+            </span>
             <label className="flex items-center gap-1.5 text-[11px] cursor-pointer">
               <input
                 type="checkbox"
@@ -125,7 +183,78 @@ export function StatisticsPanel(): JSX.Element {
               Giới hạn cứng
             </label>
           </div>
-          <div className="flex items-center gap-1.5">
+
+          {/* Chọn gói phân khúc giá bình quân thị trường Việt Nam */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>Gói phân khúc đơn giá:</span>
+              <span className="font-medium text-foreground">{BOQ_TIER_LABELS[boqTier]}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {(['economy', 'standard', 'premium'] as const).map((tier) => (
+                <Button
+                  key={tier}
+                  type="button"
+                  variant={boqTier === tier ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-6 text-[10px] px-1"
+                  onClick={() => handleTierChange(tier)}
+                >
+                  {BOQ_TIER_LABELS[tier]}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tùy chỉnh đơn giá lát sàn & sơn tường (VNĐ / m²) */}
+          <div className="grid grid-cols-2 gap-2 text-[11px] bg-muted/30 p-2 rounded-md">
+            <div>
+              <span className="text-muted-foreground">Lát sàn (₫/m²):</span>
+              <Input
+                type="number"
+                step={10000}
+                value={customFloorPrice}
+                onChange={(e) => setCustomFloorPrice(e.target.value)}
+                className="h-6 text-xs mt-0.5"
+              />
+            </div>
+            <div>
+              <span className="text-muted-foreground">Sơn tường (₫/m²):</span>
+              <Input
+                type="number"
+                step={5000}
+                value={customWallPrice}
+                onChange={(e) => setCustomWallPrice(e.target.value)}
+                className="h-6 text-xs mt-0.5"
+              />
+            </div>
+          </div>
+
+          {/* Bảng chi tiết thành tiền hoàn thiện và nội thất */}
+          <div className="space-y-1 bg-muted/20 p-2 rounded-md text-[11px]">
+            <div className="flex justify-between items-baseline">
+              <span className="text-muted-foreground">1. Chi phí nội thất:</span>
+              <span className="font-medium">{formatVnd(boq.totalFurnitureCost)}</span>
+            </div>
+            <div className="flex justify-between items-baseline">
+              <span className="text-muted-foreground">2. Hoàn thiện sàn ({boq.totalFloorArea.toFixed(1)} m²):</span>
+              <span className="font-medium">{formatVnd(boq.totalFloorFinishingCost)}</span>
+            </div>
+            <div className="flex justify-between items-baseline">
+              <span className="text-muted-foreground">3. Sơn tường thực ({boq.totalNetWallArea.toFixed(1)} m²):</span>
+              <span className="font-medium">{formatVnd(boq.totalWallFinishingCost)}</span>
+            </div>
+            <div className="flex justify-between items-baseline pt-1 border-t border-border font-semibold text-xs">
+              <span className="text-foreground">TỔNG DỰ TOÁN (BOQ):</span>
+              <span className={overBudget ? 'text-red-600' : 'text-primary'}>
+                {formatVnd(totalBoqCost)}
+              </span>
+            </div>
+          </div>
+
+          {/* Thiết lập ngân quỹ ban đầu */}
+          <div className="flex items-center gap-1.5 pt-1">
+            <span className="text-[11px] text-muted-foreground shrink-0">Ngân quỹ:</span>
             <Input
               type="number"
               min={0}
@@ -146,44 +275,53 @@ export function StatisticsPanel(): JSX.Element {
               className="h-7 text-xs w-24"
             />
             <span className="text-[11px] text-muted-foreground shrink-0">triệu ₫</span>
+            <div className="flex gap-1 ml-auto">
+              {[250, 500, 1000].map((m) => (
+                <Button
+                  key={m}
+                  type="button"
+                  variant={Math.round(budget / 1_000_000) === m ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-6 px-1.5 text-[10px]"
+                  onClick={() => {
+                    setBudgetInputM(String(m));
+                    actions.setBudgetLimit(m * 1_000_000);
+                  }}
+                >
+                  {m >= 1000 ? `${m / 1000} tỷ` : `${m} tr`}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <StatRow label={overBudget ? 'Vượt ngân quỹ' : 'Ngân quỹ còn lại'} highlight={overBudget}>
+            {formatVnd(Math.abs(budget - totalBoqCost))}
+          </StatRow>
+          <ProgressBar value={budgetUsedRatio} label="Tiến độ ngân quỹ" intent={overBudget ? 'danger' : 'normal'} />
+
+          {/* Các nút xuất báo cáo dự toán BOQ */}
+          <div className="grid grid-cols-2 gap-1.5 pt-1">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-[10px] ml-auto"
-              onClick={() => {
-                const n = Number.parseFloat(budgetInputM);
-                if (Number.isFinite(n) && n >= 0) actions.setBudgetLimit(Math.round(n * 1_000_000));
-              }}
+              className="h-7 text-[11px] flex items-center justify-center gap-1"
+              onClick={handleExportBoqCsv}
             >
-              Đặt
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Xuất CSV (Excel)</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-[11px] flex items-center justify-center gap-1"
+              onClick={handlePrintBoqPdf}
+            >
+              <Printer className="w-3.5 h-3.5 text-sky-600" />
+              <span>In Bảng BOQ / PDF</span>
             </Button>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {[100, 250, 500, 1000].map((m) => (
-              <Button
-                key={m}
-                type="button"
-                variant={Math.round(budget / 1_000_000) === m ? 'default' : 'outline'}
-                size="sm"
-                className="h-6 px-2 text-[10px]"
-                onClick={() => {
-                  setBudgetInputM(String(m));
-                  actions.setBudgetLimit(m * 1_000_000);
-                }}
-              >
-                {m >= 1000 ? `${m / 1000} tỷ` : `${m} tr`}
-              </Button>
-            ))}
-          </div>
-          <StatRow label="Tổng chi phí nội thất" highlight={overBudget}>
-            {formatVnd(cost)}
-          </StatRow>
-          <StatRow label="Ngân quỹ ban đầu">{formatVnd(budget)}</StatRow>
-          <StatRow label={overBudget ? 'Vượt ngân quỹ' : 'Còn lại'} highlight={overBudget}>
-            {formatVnd(Math.abs(budget - cost))}
-          </StatRow>
-          <ProgressBar value={budgetUsedRatio} label="Budget" intent={overBudget ? 'danger' : 'normal'} />
         </div>
 
         {counts.size > 0 && (
@@ -206,12 +344,14 @@ export function StatisticsPanel(): JSX.Element {
         )}
 
         {layout.floors.some(hasTooManyWalls) && (
-          <p className="pt-2 border-t text-muted-foreground">Rooms aren’t listed on a floor with over {MAX_ROOM_WALLS} walls.</p>
+          <p className="pt-2 border-t text-muted-foreground">
+            Rooms aren’t listed on a floor with over {MAX_ROOM_WALLS} walls.
+          </p>
         )}
 
         {roomRows.length > 0 && (
           <div className="pt-2 border-t space-y-1" aria-label="Rooms">
-            <p className="text-muted-foreground">Rooms</p>
+            <p className="text-muted-foreground font-medium">Rooms</p>
             {roomRows.map((row) => (
               <StatRow key={row.key} label={row.label}>
                 {row.area.toFixed(1)} m²
@@ -222,7 +362,7 @@ export function StatisticsPanel(): JSX.Element {
 
         {zoneRows.length > 0 && (
           <div className="pt-2 border-t space-y-1" aria-label="By zone">
-            <p className="text-muted-foreground">By zone</p>
+            <p className="text-muted-foreground font-medium">Theo khu vực (Zone)</p>
             {zoneRows.map((row) => (
               <div key={row.key} className="flex justify-between items-baseline gap-2">
                 <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
@@ -243,9 +383,8 @@ export function StatisticsPanel(): JSX.Element {
 
         {layout.floors.length > 1 && (
           <div className="pt-2 border-t space-y-1">
-            <p className="text-muted-foreground">By floor</p>
+            <p className="text-muted-foreground font-medium">Theo từng tầng</p>
             {layout.floors.map((floor) => {
-              // The porch door is free here too, so the floors add up (#693).
               const floorCost = furnitureSpend({ floors: [floor] });
               return (
                 <StatRow key={floor.id} label={floor.name}>
