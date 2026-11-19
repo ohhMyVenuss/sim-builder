@@ -115,10 +115,62 @@ function FootprintShape(): JSX.Element {
         </div>
       )}
       <p className="mt-1 text-xs text-muted-foreground">
-        {cutout
-          ? 'On every floor. The two new walls take the colour of the side they face. Flat roof only.'
-          : 'Cut a corner out of the house to make an L, on every floor.'}
+        {cutout ? 'On every floor. The two new walls take the colour of the side they face. Flat roof only.' : 'Cut a corner out of the house to make an L, on every floor.'}
       </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <Button
+          type="button"
+          variant={layout.footprintOutline ? 'outline' : 'secondary'}
+          size="sm"
+          className="h-6 px-2 text-[10px]"
+          onClick={() => {
+            history.commitNow();
+            actions.setFootprintOutline(null);
+          }}
+        >
+          Chữ nhật chuẩn
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-6 px-2 text-[10px]"
+          onClick={() => {
+            const hw = layout.width / 2;
+            const hd = layout.height / 2;
+            history.commitNow();
+            actions.setFootprintOutline([
+              { x: -hw * 0.8, z: -hd },
+              { x: hw * 0.8, z: -hd },
+              { x: hw, z: hd },
+              { x: -hw, z: hd },
+            ]);
+          }}
+        >
+          Đất nở hậu
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-6 px-2 text-[10px]"
+          onClick={() => {
+            const hw = layout.width / 2;
+            const hd = layout.height / 2;
+            history.commitNow();
+            actions.setFootprintOutline([
+              { x: -hw, z: -hd },
+              { x: hw * 0.4, z: -hd },
+              { x: hw * 0.4, z: -hd * 0.55 },
+              { x: hw, z: -hd * 0.55 },
+              { x: hw, z: hd },
+              { x: -hw, z: hd },
+            ]);
+          }}
+        >
+          Căn hộ có logia
+        </Button>
+      </div>
     </div>
   );
 }

@@ -78,6 +78,8 @@ export const layoutStore = createStore<LayoutStoreState>()((set) => {
     setFloorPlanFitMode: (mode: FloorPlanFitMode) => dispatch({ type: 'setFloorPlanFitMode', mode }),
     setRoofStyle: (style: RoofStyle) => dispatch({ type: 'setRoofStyle', style }),
     setCutout: (cutout) => dispatch({ type: 'setCutout', cutout }),
+    setFootprintOutline: (outline) => dispatch({ type: 'setFootprintOutline', outline }),
+    setInteriorWallThickness: (id, thickness) => dispatch({ type: 'setInteriorWallThickness', id, thickness }),
     setRoofColor: (color) => dispatch({ type: 'setRoofColor', color }),
     addDormer: (dormer) => {
       const id = nextId('dormer');

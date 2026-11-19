@@ -376,6 +376,7 @@ const LAYOUT_KEYS = keysOf<RoomLayout>({
   neighbours: true,
   entrance: true,
   cutout: true,
+  footprintOutline: true,
   frontage: true,
   budget: true,
 });
@@ -423,7 +424,7 @@ const ITEM_KEYS = keysOf<FurnitureItem>({
   groupId: true,
 });
 const VEC2_KEYS = ['x', 'z'] as const;
-const WALL_KEYS = keysOf<InteriorWall>({ id: true, x1: true, z1: true, x2: true, z2: true, color: true, colorB: true });
+const WALL_KEYS = keysOf<InteriorWall>({ id: true, x1: true, z1: true, x2: true, z2: true, thickness: true, color: true, colorB: true });
 const ZONE_KEYS = keysOf<RoomZone>({ id: true, name: true, color: true, x: true, z: true, w: true, d: true, outline: true, holes: true, floorPattern: true, floorColor: true });
 const ROOF_KEYS = keysOf<RoofSpec>({ style: true, color: true, dormers: true });
 const DORMER_KEYS = keysOf<DormerSpec>({

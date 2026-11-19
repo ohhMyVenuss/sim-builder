@@ -181,7 +181,18 @@ export const FURNITURE_CATALOG = [
   { type: 'window', category: 'structure', name: 'Window', width: 1.2, depth: 0.12, height: 1.2, color: '#90CAF9', icon: '🪟', price: 2_800_000 },
 ] as const satisfies readonly CatalogItem[];
 
-export type RoomTemplateKey = 'bedroom' | 'livingRoom' | 'office' | 'kitchen' | 'bathroom' | 'studio' | 'twoStory';
+export type RoomTemplateKey =
+  | 'bedroom'
+  | 'livingRoom'
+  | 'office'
+  | 'kitchen'
+  | 'bathroom'
+  | 'studio'
+  | 'twoStory'
+  | 'nhaOng5x15'
+  | 'nhaPho5x20'
+  | 'canHo2PN'
+  | 'canHo3PN';
 
 function singleFloorTemplate(
   name: string,
@@ -338,6 +349,166 @@ export const ROOM_TEMPLATES = {
           { id: 'ff-stairs', type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#8B4513', icon: '🪜', price: 1500, position: { x: 2.0, z: 1.0 }, rotation: 0 },
           templateOpening('ff-window-1', 'window', 'north', -1.5, { width: 6, depth: 5 }),
           templateOpening('ff-window-2', 'window', 'west', 0, { width: 6, depth: 5 }),
+        ],
+      },
+    ],
+  },
+  nhaOng5x15: {
+    name: 'Nhà ống 5×15 m (2 tầng)',
+    width: 5,
+    height: 15,
+    floors: [
+      {
+        id: 'ground',
+        name: 'Tầng trệt',
+        floorColor: '#E8DFD5',
+        floorPattern: 'tile',
+        interiorWalls: [
+          { id: 'w-no1', x1: -2.5, z1: 1.5, x2: 0.8, z2: 1.5, thickness: 0.1 },
+        ],
+        items: [
+          { id: 'no-sofa', type: 'sofa', category: 'seating', name: 'Sofa', width: 2.0, depth: 0.9, height: 0.8, color: '#4A5568', icon: '🛋️', price: 12_000_000, position: { x: -1.3, z: -3.5 }, rotation: Math.PI / 2 },
+          { id: 'no-tv', type: 'tv', category: 'electronics', name: 'TV Stand', width: 1.5, depth: 0.4, height: 0.5, color: '#2C3E50', icon: '📺', price: 11_000_000, position: { x: 1.8, z: -3.5 }, rotation: -Math.PI / 2 },
+          { id: 'no-coffee', type: 'coffee-table', category: 'tables', name: 'Coffee Table', width: 1.2, depth: 0.6, height: 0.4, color: '#CD853F', icon: '🟫', price: 2_800_000, position: { x: 0.1, z: -3.5 }, rotation: Math.PI / 2 },
+          { id: 'no-stairs', type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#8B4513', icon: '🪜', price: 25_000_000, position: { x: 1.6, z: 0.2 }, rotation: 0 },
+          { id: 'no-dining', type: 'dining-table', category: 'tables', name: 'Dining Table', width: 1.8, depth: 1.0, height: 0.75, color: '#A0522D', icon: '🟫', price: 7_500_000, position: { x: -0.6, z: 3.5 }, rotation: 0 },
+          { id: 'no-fridge', type: 'fridge', category: 'kitchen', name: 'Refrigerator', width: 0.7, depth: 0.7, height: 1.8, color: '#E0E0E0', icon: '🧊', price: 14_000_000, position: { x: 1.9, z: 6.2 }, rotation: -Math.PI / 2 },
+          { id: 'no-stove', type: 'stove', category: 'kitchen', name: 'Stove', width: 0.7, depth: 0.65, height: 0.9, color: '#424242', icon: '🍳', price: 9_500_000, position: { x: 0.4, z: 6.9 }, rotation: Math.PI },
+          { id: 'no-toilet', type: 'toilet', category: 'bathroom', name: 'Toilet', width: 0.4, depth: 0.7, height: 0.8, color: '#FAFAFA', icon: '🚽', price: 4_500_000, position: { x: -2.0, z: 6.8 }, rotation: Math.PI },
+          templateOpening('no-door-1', 'door', 'north', 1.2, { width: 5, depth: 15 }),
+          templateOpening('no-win-1', 'window', 'north', -1.2, { width: 5, depth: 15 }),
+        ],
+      },
+      {
+        id: 'first',
+        name: 'Tầng 2',
+        floorColor: '#EFE3D5',
+        floorPattern: 'wood',
+        interiorWalls: [
+          { id: 'w-no2', x1: -2.5, z1: -1.5, x2: 0.8, z2: -1.5, thickness: 0.1 },
+          { id: 'w-no3', x1: -2.5, z1: 2.2, x2: 0.8, z2: 2.2, thickness: 0.1 },
+        ],
+        items: [
+          { id: 'no2-bed1', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: -1.0, z: -4.8 }, rotation: 0 },
+          { id: 'no2-wardrobe1', type: 'wardrobe', category: 'bedroom', name: 'Wardrobe', width: 1.4, depth: 0.6, height: 2.1, color: '#6D4C41', icon: '🚪', price: 8_500_000, position: { x: 1.6, z: -5.2 }, rotation: -Math.PI / 2 },
+          { id: 'no2-stairs', type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#8B4513', icon: '🪜', price: 25_000_000, position: { x: 1.6, z: 0.2 }, rotation: 0 },
+          { id: 'no2-bed2', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: -0.9, z: 5.0 }, rotation: Math.PI },
+          templateOpening('no2-win-1', 'window', 'north', 0, { width: 5, depth: 15 }),
+          templateOpening('no2-win-2', 'window', 'south', 0, { width: 5, depth: 15 }),
+        ],
+      },
+    ],
+  },
+  nhaPho5x20: {
+    name: 'Nhà phố 5×20 m (3 tầng)',
+    width: 5,
+    height: 20,
+    floors: [
+      {
+        id: 'ground',
+        name: 'Tầng trệt',
+        floorColor: '#E5DDD3',
+        floorPattern: 'tile',
+        interiorWalls: [
+          { id: 'w-np1', x1: -2.5, z1: -3.5, x2: 2.5, z2: -3.5, thickness: 0.2 },
+          { id: 'w-np2', x1: -2.5, z1: 3.0, x2: 0.8, z2: 3.0, thickness: 0.1 },
+        ],
+        items: [
+          { id: 'np-sofa', type: 'sofa', category: 'seating', name: 'Sofa', width: 2.0, depth: 0.9, height: 0.8, color: '#4A5568', icon: '🛋️', price: 12_000_000, position: { x: -1.3, z: -0.5 }, rotation: Math.PI / 2 },
+          { id: 'np-tv', type: 'tv', category: 'electronics', name: 'TV Stand', width: 1.5, depth: 0.4, height: 0.5, color: '#2C3E50', icon: '📺', price: 11_000_000, position: { x: 1.8, z: -0.5 }, rotation: -Math.PI / 2 },
+          { id: 'np-stairs', type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#8B4513', icon: '🪜', price: 25_000_000, position: { x: 1.6, z: 3.8 }, rotation: 0 },
+          { id: 'np-dining', type: 'dining-table', category: 'tables', name: 'Dining Table', width: 1.8, depth: 1.0, height: 0.75, color: '#A0522D', icon: '🟫', price: 7_500_000, position: { x: -0.5, z: 6.5 }, rotation: 0 },
+          { id: 'np-fridge', type: 'fridge', category: 'kitchen', name: 'Refrigerator', width: 0.7, depth: 0.7, height: 1.8, color: '#E0E0E0', icon: '🧊', price: 14_000_000, position: { x: 1.9, z: 9.2 }, rotation: -Math.PI / 2 },
+          templateOpening('np-door-1', 'door', 'north', 1.2, { width: 5, depth: 20 }),
+        ],
+      },
+      {
+        id: 'first',
+        name: 'Tầng 2',
+        floorColor: '#F3E8DC',
+        floorPattern: 'wood',
+        interiorWalls: [
+          { id: 'w-np3', x1: -2.5, z1: -1.0, x2: 0.8, z2: -1.0, thickness: 0.1 },
+          { id: 'w-np4', x1: -2.5, z1: 5.5, x2: 0.8, z2: 5.5, thickness: 0.1 },
+        ],
+        items: [
+          { id: 'np2-bed1', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: -1.0, z: -6.5 }, rotation: 0 },
+          { id: 'np2-stairs', type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#8B4513', icon: '🪜', price: 25_000_000, position: { x: 1.6, z: 3.8 }, rotation: 0 },
+          { id: 'np2-bed2', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: -0.9, z: 8.0 }, rotation: Math.PI },
+          templateOpening('np2-win-1', 'window', 'north', 0, { width: 5, depth: 20 }),
+        ],
+      },
+      {
+        id: 'second',
+        name: 'Tầng 3',
+        floorColor: '#F3E8DC',
+        floorPattern: 'wood',
+        items: [
+          { id: 'np3-desk', type: 'desk', category: 'tables', name: 'Desk', width: 1.2, depth: 0.6, height: 0.75, color: '#8B4513', icon: '🖥️', price: 4_500_000, position: { x: -1.4, z: -7.5 }, rotation: 0 },
+          { id: 'np3-stairs', type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#8B4513', icon: '🪜', price: 25_000_000, position: { x: 1.6, z: 3.8 }, rotation: 0 },
+          templateOpening('np3-win-1', 'window', 'north', 0, { width: 5, depth: 20 }),
+        ],
+      },
+    ],
+  },
+  canHo2PN: {
+    name: 'Căn hộ 2 phòng ngủ (70 m²)',
+    width: 10,
+    height: 7,
+    floors: [
+      {
+        id: 'ground',
+        name: 'Mặt bằng căn hộ',
+        floorColor: '#EFE7DC',
+        floorPattern: 'wood',
+        interiorWalls: [
+          { id: 'w-c2-1', x1: -1.5, z1: -3.5, x2: -1.5, z2: 3.5, thickness: 0.1 },
+          { id: 'w-c2-2', x1: -5.0, z1: 0, x2: -1.5, z2: 0, thickness: 0.1 },
+          { id: 'w-c2-3', x1: 2.2, z1: -3.5, x2: 2.2, z2: 0.5, thickness: 0.1 },
+        ],
+        items: [
+          { id: 'c2-bed1', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: -3.5, z: -2.0 }, rotation: 0 },
+          { id: 'c2-bed2', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: -3.5, z: 2.0 }, rotation: Math.PI },
+          { id: 'c2-sofa', type: 'sofa', category: 'seating', name: 'Sofa', width: 2.0, depth: 0.9, height: 0.8, color: '#4A5568', icon: '🛋️', price: 12_000_000, position: { x: 0.2, z: 2.2 }, rotation: Math.PI },
+          { id: 'c2-tv', type: 'tv', category: 'electronics', name: 'TV Stand', width: 1.5, depth: 0.4, height: 0.5, color: '#2C3E50', icon: '📺', price: 11_000_000, position: { x: 0.2, z: -0.5 }, rotation: 0 },
+          { id: 'c2-dining', type: 'dining-table', category: 'tables', name: 'Dining Table', width: 1.8, depth: 1.0, height: 0.75, color: '#A0522D', icon: '🟫', price: 7_500_000, position: { x: 3.5, z: 2.0 }, rotation: 0 },
+          { id: 'c2-fridge', type: 'fridge', category: 'kitchen', name: 'Refrigerator', width: 0.7, depth: 0.7, height: 1.8, color: '#E0E0E0', icon: '🧊', price: 14_000_000, position: { x: 4.3, z: -2.8 }, rotation: -Math.PI / 2 },
+          { id: 'c2-stove', type: 'stove', category: 'kitchen', name: 'Stove', width: 0.7, depth: 0.65, height: 0.9, color: '#424242', icon: '🍳', price: 9_500_000, position: { x: 3.2, z: -2.8 }, rotation: 0 },
+          templateOpening('c2-door-1', 'door', 'north', 1.2, { width: 10, depth: 7 }),
+          templateOpening('c2-win-1', 'window', 'south', 0.2, { width: 10, depth: 7 }),
+          templateOpening('c2-win-2', 'window', 'west', -1.8, { width: 10, depth: 7 }),
+        ],
+      },
+    ],
+  },
+  canHo3PN: {
+    name: 'Căn hộ 3 phòng ngủ (96 m²)',
+    width: 12,
+    height: 8,
+    floors: [
+      {
+        id: 'ground',
+        name: 'Mặt bằng căn hộ',
+        floorColor: '#EFE7DC',
+        floorPattern: 'wood',
+        interiorWalls: [
+          { id: 'w-c3-1', x1: -2.2, z1: -4.0, x2: -2.2, z2: 4.0, thickness: 0.1 },
+          { id: 'w-c3-2', x1: -6.0, z1: 0, x2: -2.2, z2: 0, thickness: 0.1 },
+          { id: 'w-c3-3', x1: 2.4, z1: -4.0, x2: 2.4, z2: 4.0, thickness: 0.1 },
+          { id: 'w-c3-4', x1: 2.4, z1: 0.4, x2: 6.0, z2: 0.4, thickness: 0.1 },
+        ],
+        items: [
+          { id: 'c3-bed1', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: -4.2, z: -2.2 }, rotation: 0 },
+          { id: 'c3-bed2', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: -4.2, z: 2.2 }, rotation: Math.PI },
+          { id: 'c3-bed3', type: 'bed', category: 'bedroom', name: 'Double Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 12_500_000, position: { x: 4.3, z: 2.4 }, rotation: Math.PI },
+          { id: 'c3-sofa', type: 'sofa', category: 'seating', name: 'Sofa', width: 2.0, depth: 0.9, height: 0.8, color: '#4A5568', icon: '🛋️', price: 12_000_000, position: { x: 0.1, z: 2.6 }, rotation: Math.PI },
+          { id: 'c3-tv', type: 'tv', category: 'electronics', name: 'TV Stand', width: 1.5, depth: 0.4, height: 0.5, color: '#2C3E50', icon: '📺', price: 11_000_000, position: { x: 0.1, z: -0.2 }, rotation: 0 },
+          { id: 'c3-dining', type: 'dining-table', category: 'tables', name: 'Dining Table', width: 1.8, depth: 1.0, height: 0.75, color: '#A0522D', icon: '🟫', price: 7_500_000, position: { x: 0.1, z: -2.2 }, rotation: 0 },
+          { id: 'c3-fridge', type: 'fridge', category: 'kitchen', name: 'Refrigerator', width: 0.7, depth: 0.7, height: 1.8, color: '#E0E0E0', icon: '🧊', price: 14_000_000, position: { x: 5.2, z: -3.2 }, rotation: -Math.PI / 2 },
+          { id: 'c3-stove', type: 'stove', category: 'kitchen', name: 'Stove', width: 0.7, depth: 0.65, height: 0.9, color: '#424242', icon: '🍳', price: 9_500_000, position: { x: 3.8, z: -3.2 }, rotation: 0 },
+          templateOpening('c3-door-1', 'door', 'north', 1.2, { width: 12, depth: 8 }),
+          templateOpening('c3-win-1', 'window', 'south', 0, { width: 12, depth: 8 }),
+          templateOpening('c3-win-2', 'window', 'east', 2.2, { width: 12, depth: 8 }),
         ],
       },
     ],

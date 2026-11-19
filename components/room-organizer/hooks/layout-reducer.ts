@@ -74,6 +74,8 @@ export type LayoutAction =
   | { type: 'setWidth'; width: number }
   | { type: 'setHeight'; height: number }
   | { type: 'setCutout'; cutout: FootprintCutout | null }
+  | { type: 'setFootprintOutline'; outline: ReadonlyArray<{ x: number; z: number }> | null }
+  | { type: 'setInteriorWallThickness'; id: string; thickness: number }
   // floor-scoped finishes — target the active floor
   | { type: 'setFloorColor'; color: string }
   | { type: 'setFloorPattern'; pattern: FloorPattern }
@@ -481,6 +483,30 @@ function reduceLayout(state: LayoutState, action: LayoutAction): LayoutState {
       }));
       return withSale(state, next, sold);
     }
+
+    case 'setFootprintOutline':
+      return withLayout(state, (layout) => {
+        if (!action.outline || action.outline.length < 3) {
+          const { footprintOutline: _removed, ...rest } = layout;
+          return rest;
+        }
+        const outline = action.outline.map((p) => ({ x: p.x, z: p.z }));
+        const xs = outline.map((p) => p.x);
+        const zs = outline.map((p) => p.z);
+        const width = Math.max(2, Math.min(MAX_ROOM_DIMENSION, Math.max(...xs) - Math.min(...xs)));
+        const height = Math.max(2, Math.min(MAX_ROOM_DIMENSION, Math.max(...zs) - Math.min(...zs)));
+        const { cutout: _cutout, ...rest } = layout;
+        return { ...rest, width, height, footprintOutline: outline };
+      });
+
+    case 'setInteriorWallThickness':
+      return withActiveFloor(state, (floor) => {
+        const clamped = Math.max(0.08, Math.min(0.4, Math.round(action.thickness * 100) / 100));
+        const interiorWalls = (floor.interiorWalls ?? []).map((w) =>
+          w.id === action.id ? { ...w, thickness: clamped } : w
+        );
+        return { ...floor, interiorWalls };
+      });
 
     case 'setHardBudget':
       // Off keeps a write-off, so off-and-on can't wipe sale losses; a

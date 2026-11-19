@@ -110,10 +110,11 @@ export function renderInteriorWalls(
       material.opacity = ghostOpacity;
     }
 
+    const wallThickness = wall.thickness ?? INTERIOR_WALL_THICKNESS;
     const geometry =
       openings.length > 0
-        ? buildExtrudedWallGeometry(THREE, meshLength, wallHeight, INTERIOR_WALL_THICKNESS, meshOpenings)
-        : new THREE.BoxGeometry(meshLength, wallHeight, INTERIOR_WALL_THICKNESS);
+        ? buildExtrudedWallGeometry(THREE, meshLength, wallHeight, wallThickness, meshOpenings)
+        : new THREE.BoxGeometry(meshLength, wallHeight, wallThickness);
 
     // Local +z is side 'a' (lib/wall-sides.ts). A second material only when
     // the faces differ, so a plain wall stays one draw call.
