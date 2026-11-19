@@ -16,8 +16,8 @@ import { notifyWithUndo } from '../lib/editor-notices';
 import { MIN_CUTOUT_SIZE, MIN_WING_SIZE } from '../lib/footprint';
 import { MAX_NAME_LENGTH } from '../lib/schema';
 import { MAX_STOREY_HEIGHT, MIN_STOREY_HEIGHT, storeyHeight } from '../lib/storeys';
-import type { FloorPlanFitMode, FootprintCorner, FootprintCutout } from '../lib/types';
 import { Blueprint2DPanel } from './blueprint-2d-panel';
+import type { FloorPlanFitMode, FootprintCorner, FootprintCutout } from '../lib/types';
 
 const ROOM_INPUT_MIN = 2;
 const ROOM_INPUT_MAX = 20;
