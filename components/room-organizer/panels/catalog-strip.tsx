@@ -9,7 +9,8 @@ import { useRefusal } from '../hooks/use-refusal';
 import { useScrollCue } from '../hooks/use-scroll-cue';
 import { budgetBlockedReason } from '../lib/budget';
 import { CATALOG_DRAG_MIME, catalogKey, catalogTileBlockedReason } from '../lib/catalog-drag';
-import { CURRENCY_SYMBOL, FURNITURE_CATALOG } from '../lib/constants';
+import { FURNITURE_CATALOG } from '../lib/constants';
+import { formatVnd } from '../lib/format';
 import { catalogFitsItsTiles, catalogPageSize, COARSE_POINTER_QUERY, COMPACT_DOCK_QUERY } from '../lib/hud-layout';
 import { buildToolLabel, buildToolsTitle } from '../lib/modes';
 import { Icon, iconForItem, type PlotcraftIconName } from '../plotcraft/icon';
@@ -371,11 +372,11 @@ function CatalogTile({ item, blockedReason, onAdd, roving, showName, docked, ove
         onAdd();
       }}
       aria-disabled={blocked || undefined}
-      aria-label={`${item.name}, ${showName && overBudget ? 'Over budget' : `${CURRENCY_SYMBOL}${item.price.toLocaleString()}`}`}
+      aria-label={`${item.name}, ${showName && overBudget ? 'Vượt ngân quỹ' : formatVnd(item.price, true)}`}
       title={
         blocked
           ? `${item.name} — ${blockedReason}`
-          : `${item.name} — ${CURRENCY_SYMBOL}${item.price.toLocaleString()}. Click to pick it up and click again to place it, drag it onto the view, or press Enter to place and position it with the keyboard.`
+          : `${item.name} — ${formatVnd(item.price)}. Click to pick it up and click again to place it, drag it onto the view, or press Enter to place and position it with the keyboard.`
       }
       {...roving}
       draggable={!blocked}
@@ -430,7 +431,7 @@ function CatalogTile({ item, blockedReason, onAdd, roving, showName, docked, ove
           lineHeight: 1,
         }}
       >
-        {showName && overBudget ? 'Over budget' : `${CURRENCY_SYMBOL}${item.price.toLocaleString()}`}
+        {showName && overBudget ? 'Vượt ngân quỹ' : formatVnd(item.price, true)}
       </span>
     </button>
   );

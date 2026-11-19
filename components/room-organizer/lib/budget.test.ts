@@ -60,8 +60,8 @@ describe('budget arithmetic (#463e)', () => {
   it('a tile is blocked only when the hard budget is on and the price is over what is left', () => {
     expect(budgetBlockedReason(5000, null)).toBeNull();
     expect(budgetBlockedReason(500, 500)).toBeNull();
-    expect(budgetBlockedReason(501, 500)).toMatch(/Over budget: \$500 left/);
-    expect(budgetBlockedReason(10, -40)).toMatch(/\$0 left/);
+    expect(budgetBlockedReason(501, 500)).toMatch(/Vượt ngân quỹ: còn 500 ₫/);
+    expect(budgetBlockedReason(10, -40)).toMatch(/0 ₫/);
     // A free item is never greyed, even over budget: buying it raises nothing.
     expect(budgetBlockedReason(0, -40)).toBeNull();
   });
@@ -70,7 +70,7 @@ describe('budget arithmetic (#463e)', () => {
     const on = makeLayout({ floors: [makeFloor({ items: [sofa] })], budget: { writeOff: 0 } });
     expect(purchasePrice([sofa, lamp, makeItem({ id: ENTRANCE_DOOR_ID, price: 300 })])).toBe(695);
     expect(purchaseRefusal(on, DEFAULT_BUDGET - 650)).toBeNull();
-    expect(purchaseRefusal(on, DEFAULT_BUDGET - 649)).toMatch(/Over budget/);
+    expect(purchaseRefusal(on, DEFAULT_BUDGET - 649)).toMatch(/Vượt ngân quỹ/);
     expect(purchaseRefusal({ ...on, budget: { writeOff: 0, enabled: false } }, DEFAULT_BUDGET * 9)).toBeNull();
   });
 
@@ -323,9 +323,10 @@ describe('floorClonePrice (#588)', () => {
   });
 
   it('names the floor and the price when the budget refuses the copy', () => {
-    const beds = Array.from({ length: 18 }, (_, i) => makeItem({ id: `bed-${i}`, category: 'bedroom', price: 800 }));
+    const beds = Array.from({ length: 18 }, (_, i) => makeItem({ id: `bed-${i}`, category: 'bedroom', price: 8_000_000 }));
     const layout = makeLayout({ floors: [makeFloor({ items: beds })], budget: { writeOff: 0 } });
-    expect(floorCloneRefusal(layout, 'Ground', beds)).toBe('Cloning Ground buys $14,400 of furniture. Over budget: $10,600 left');
+    expect(floorCloneRefusal(layout, 'Ground', beds)).toContain('144.000.000 ₫');
+    expect(floorCloneRefusal(layout, 'Ground', beds)).toContain('Vượt ngân quỹ');
     expect(floorCloneRefusal({ ...layout, budget: { writeOff: 0, enabled: false } }, 'Ground', beds)).toBeNull();
     expect(floorCloneRefusal(layout, 'Ground', beds.slice(0, 10))).toBeNull();
   });
@@ -369,7 +370,7 @@ describe('loadTemplateUnderBudget (#691)', () => {
     const writeOff = DEFAULT_BUDGET - studioPrice + 1;
     const load = loadTemplateUnderBudget(houseWith([], { writeOff }), studio, 'Studio template');
     expect(load.layout).toBeNull();
-    expect(load.refusal).toContain('Over budget: the Studio template costs');
+    expect(load.refusal).toContain('Vượt ngân quỹ: Studio template có giá');
     expect(loadTemplateUnderBudget(houseWith([], { writeOff: writeOff - 1 }), studio, 'Studio template').refusal).toBeNull();
   });
 });

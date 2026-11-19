@@ -1,4 +1,5 @@
-import { CURRENCY_SYMBOL, DEFAULT_BUDGET } from './constants';
+import { DEFAULT_BUDGET } from './constants';
+import { formatVnd } from './format';
 import { ENTRANCE_DOOR_ID } from './street';
 import type { FurnitureItem, HardBudget, RoomLayout } from './types';
 
@@ -24,8 +25,14 @@ export const SELL_BACK_RATE = 0.8;
 /** Appended to a confirm that removes furniture while the hard budget is on. */
 export const HARD_BUDGET_SELL_BACK_NOTE = ` With the hard budget on, the furniture sells back at ${Math.round(SELL_BACK_RATE * 100)}%.`;
 
-/** Cap on the stored write-off: far past any house the editor can hold. */
-export const MAX_WRITE_OFF = 1e9;
+/** Cap on the stored write-off & budget limit: 100 tỷ VNĐ. */
+export const MAX_WRITE_OFF = 1e11;
+
+/** Initial budget limit in VNĐ for the house (custom or default). */
+export function budgetLimit(layout: Pick<RoomLayout, 'budget'>): number {
+  const raw = layout.budget?.limit;
+  return typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_BUDGET;
+}
 
 /**
  * Price of the furniture standing in the house. The porch door is structure,
@@ -61,7 +68,7 @@ export function budgetSpent(layout: Pick<RoomLayout, 'floors' | 'budget'>): numb
 
 /** What is left to spend under the hard budget, or null when it is off. */
 export function budgetRemaining(layout: Pick<RoomLayout, 'floors' | 'budget'>): number | null {
-  return isHardBudgetOn(layout) ? DEFAULT_BUDGET - budgetSpent(layout) : null;
+  return isHardBudgetOn(layout) ? budgetLimit(layout) - budgetSpent(layout) : null;
 }
 
 /** Price of buying `items` (copies, a paste, a set); the porch door is free. */
@@ -102,7 +109,7 @@ export function floorCloneRefusal(
 ): string | null {
   const price = floorClonePrice(items);
   const refusal = purchaseRefusal(layout, price);
-  return refusal === null ? null : `Cloning ${floorName} buys ${CURRENCY_SYMBOL}${price.toLocaleString()} of furniture. ${refusal}`;
+  return refusal === null ? null : `Cloning ${floorName} buys ${formatVnd(price)} of furniture. ${refusal}`;
 }
 
 /** What Demolish pays back for an item: whole currency units. */
@@ -143,8 +150,8 @@ export function bookSale<T extends Pick<RoomLayout, 'budget'>>(
   items: readonly Pick<FurnitureItem, 'id' | 'price'>[]
 ): T {
   const loss = hardBudgetLoss(layout, items);
-  if (loss === 0 || !layout.budget) return layout;
-  return { ...layout, budget: { writeOff: Math.min(MAX_WRITE_OFF, layout.budget.writeOff + loss) } };
+  if (!loss || !layout.budget) return layout;
+  return { ...layout, budget: { ...layout.budget, writeOff: Math.min(MAX_WRITE_OFF, layout.budget.writeOff + loss) } };
 }
 
 /** A template load under the hard budget (#691): the house to apply, or why not. */
@@ -169,11 +176,11 @@ export function loadTemplateUnderBudget<T extends RoomLayout>(current: RoomLayou
   const layout = { ...rest, budget } as T;
   if (!isHardBudgetOn(current)) return { layout, refusal: null, writtenOff: 0 };
   const price = purchasePrice(template.floors.flatMap((floor) => floor.items));
-  const left = DEFAULT_BUDGET - budget.writeOff;
+  const left = budgetLimit(current) - budget.writeOff;
   if (price > 0 && price > left) {
     return {
       layout: null,
-      refusal: `Over budget: the ${label} costs ${CURRENCY_SYMBOL}${price.toLocaleString()}, and ${CURRENCY_SYMBOL}${Math.max(0, left).toLocaleString()} is left once this house sells back`,
+      refusal: `Vượt ngân quỹ: ${label} có giá ${formatVnd(price)}, chỉ còn ${formatVnd(Math.max(0, left))} sau khi thanh lý đồ cũ`,
       writtenOff: 0,
     };
   }
@@ -186,7 +193,7 @@ export function loadTemplateUnderBudget<T extends RoomLayout>(current: RoomLayou
  */
 export function budgetBlockedReason(price: number, remaining: number | null): string | null {
   if (remaining === null || price <= 0 || price <= remaining) return null;
-  return `Over budget: ${CURRENCY_SYMBOL}${Math.max(0, remaining).toLocaleString()} left`;
+  return `Vượt ngân quỹ: còn ${formatVnd(Math.max(0, remaining))}`;
 }
 
 /** A stored write-off the schema accepts. */
@@ -203,10 +210,18 @@ function isWriteOff(value: unknown): value is number {
  */
 export function repairHardBudget(value: unknown): HardBudget | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
-  const { writeOff: raw, enabled } = value as { writeOff?: unknown; enabled?: unknown };
+  const { writeOff: raw, enabled, limit: rawLimit } = value as { writeOff?: unknown; enabled?: unknown; limit?: unknown };
   const off = enabled === false;
-  const clean = Object.keys(value).length === (off ? 2 : 1) && isWriteOff(raw);
+  const hasLimit = rawLimit !== undefined;
+  const limitValid = hasLimit && isWriteOff(rawLimit);
+  const expectedKeys = 1 + (off ? 1 : 0) + (limitValid ? 1 : 0);
+  const clean = Object.keys(value).length === expectedKeys && isWriteOff(raw) && (!hasLimit || limitValid);
   if (clean) return value as HardBudget;
   const writeOff = typeof raw === 'number' && Number.isFinite(raw) ? Math.min(MAX_WRITE_OFF, Math.max(0, raw)) : 0;
-  return off ? { writeOff, enabled: false } : { writeOff };
+  const repaired: HardBudget = { writeOff };
+  if (off) repaired.enabled = false;
+  if (typeof rawLimit === 'number' && Number.isFinite(rawLimit)) {
+    repaired.limit = Math.min(MAX_WRITE_OFF, Math.max(0, Math.round(rawLimit)));
+  }
+  return repaired;
 }

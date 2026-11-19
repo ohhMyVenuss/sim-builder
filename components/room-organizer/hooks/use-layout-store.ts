@@ -102,6 +102,18 @@ export const layoutStore = createStore<LayoutStoreState>()((set) => {
     removeItem: (id) => dispatch({ type: 'removeItem', id }),
     sellItems: (ids) => dispatch({ type: 'sellItems', ids }),
     setHardBudget: (on) => dispatch({ type: 'setHardBudget', on }),
+    setBudgetLimit: (limit) => dispatch({ type: 'setBudgetLimit', limit }),
+    applyBlueprint2D: (params) =>
+      dispatch({
+        type: 'applyBlueprint2D',
+        width: params.width,
+        depth: params.depth,
+        interiorWalls: params.interiorWalls.map((w) => ({ ...w, id: nextId('wall') })),
+        mode: params.mode,
+        ...(params.floorCount !== undefined ? { floorCount: params.floorCount } : {}),
+        ...(params.storeyHeightMeters !== undefined ? { storeyHeightMeters: params.storeyHeightMeters } : {}),
+        ...(params.floorPlanImage !== undefined ? { floorPlanImage: params.floorPlanImage } : {}),
+      }),
     duplicateItem: (id) => {
       const newId = nextId('copy');
       dispatch({ type: 'duplicateItem', sourceId: id, newId });
