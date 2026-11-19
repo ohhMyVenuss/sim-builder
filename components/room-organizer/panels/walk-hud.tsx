@@ -4,7 +4,8 @@ import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useViewSettings } from '../contexts';
 import { useMediaQuery } from '../hooks/use-media-query';
 import { COARSE_POINTER_QUERY } from '../lib/hud-layout';
-import { Icon } from '../plotcraft/icon';
+import { Icon, type PlotcraftIconName } from '../plotcraft/icon';
+import type { InteractiveKind } from '../lib/walk-interact';
 
 export interface WalkHudProps {
   /** Pointer lock is engaged: the keys walk and the mouse looks. */
@@ -25,6 +26,15 @@ export interface WalkHudProps {
   onToggleSit(): void;
   onToggleLie?(): void;
   onExit(): void;
+  /** The interactable target currently in reach and view, if any. */
+  interactTarget?: {
+    id: string;
+    name: string;
+    type: string;
+    kind: InteractiveKind;
+    active: boolean;
+  } | null;
+  onToggleInteract?(): void;
 }
 
 /**
@@ -40,7 +50,17 @@ export function WalkHud(props: WalkHudProps): JSX.Element {
   return touch ? <TouchWalkHud {...props} /> : <DesktopWalkHud {...props} />;
 }
 
-function DesktopWalkHud({ locked, lockRefused, seatName, isBed = false, seated, lying = false, floorName, multiFloor }: WalkHudProps): JSX.Element {
+function DesktopWalkHud({
+  locked,
+  lockRefused,
+  seatName,
+  isBed = false,
+  seated,
+  lying = false,
+  floorName,
+  multiFloor,
+  interactTarget,
+}: WalkHudProps): JSX.Element {
   let prompt: string | null = null;
   let promptKey = 'E';
   let secondaryPrompt: string | null = null;
@@ -49,6 +69,37 @@ function DesktopWalkHud({ locked, lockRefused, seatName, isBed = false, seated, 
   if (seated || lying) {
     prompt = 'Stand up';
     promptKey = 'E / F';
+  } else if (interactTarget) {
+    const { kind, name, active } = interactTarget;
+    if (kind === 'seat') {
+      if (isBed) {
+        prompt = `Sit on ${name}`;
+        promptKey = 'E';
+        secondaryPrompt = 'Lie down';
+        secondaryKey = 'F';
+      } else {
+        prompt = `Sit on ${name}`;
+        promptKey = 'E';
+      }
+    } else if (kind === 'lamp') {
+      prompt = active ? `Turn off ${name}` : `Turn on ${name}`;
+      promptKey = 'E';
+    } else if (kind === 'tv') {
+      prompt = active ? 'Turn off TV' : 'Turn on TV';
+      promptKey = 'E';
+    } else if (kind === 'water') {
+      prompt = active ? `Turn off ${name}` : `Turn on ${name}`;
+      promptKey = 'E';
+    } else if (kind === 'stove') {
+      prompt = active ? 'Turn off stove' : 'Turn on stove';
+      promptKey = 'E';
+    } else if (kind === 'door') {
+      prompt = active ? 'Close door' : 'Open door';
+      promptKey = 'E';
+    } else if (kind === 'storage') {
+      prompt = active ? `Close ${name}` : `Open ${name}`;
+      promptKey = 'E';
+    }
   } else if (seatName) {
     if (isBed) {
       prompt = `Sit on ${seatName}`;
@@ -110,9 +161,64 @@ function DesktopWalkHud({ locked, lockRefused, seatName, isBed = false, seated, 
   );
 }
 
-function TouchWalkHud({ seatName, isBed = false, seated, lying = false, floorName, onStick, onToggleSit, onToggleLie, onExit }: WalkHudProps): JSX.Element {
+function TouchWalkHud({
+  seatName,
+  isBed = false,
+  seated,
+  lying = false,
+  floorName,
+  onStick,
+  onToggleSit,
+  onToggleLie,
+  onExit,
+  interactTarget,
+  onToggleInteract,
+}: WalkHudProps): JSX.Element {
   const isUp = seated || lying;
-  const canAct = isUp || seatName !== null;
+  const canAct = isUp || interactTarget != null || seatName !== null;
+
+  let buttonLabel = isUp ? 'Stand' : 'Sit';
+  let buttonIcon: PlotcraftIconName = isUp ? 'arrowU' : 'sofa';
+  let actionHandler = onToggleSit;
+
+  if (isUp) {
+    buttonLabel = 'Stand';
+    buttonIcon = 'arrowU';
+    actionHandler = onToggleSit;
+  } else if (interactTarget) {
+    actionHandler = onToggleInteract ?? onToggleSit;
+    switch (interactTarget.kind) {
+      case 'seat':
+        buttonLabel = 'Sit';
+        buttonIcon = isBed ? 'bed' : 'sofa';
+        break;
+      case 'lamp':
+        buttonLabel = interactTarget.active ? 'Off' : 'Light';
+        buttonIcon = 'lamp';
+        break;
+      case 'tv':
+        buttonLabel = interactTarget.active ? 'Off' : 'TV';
+        buttonIcon = 'tv';
+        break;
+      case 'water':
+        buttonLabel = interactTarget.active ? 'Stop' : 'Water';
+        buttonIcon = 'sink';
+        break;
+      case 'stove':
+        buttonLabel = interactTarget.active ? 'Off' : 'Cook';
+        buttonIcon = 'stove';
+        break;
+      case 'door':
+        buttonLabel = interactTarget.active ? 'Close' : 'Open';
+        buttonIcon = 'door';
+        break;
+      case 'storage':
+        buttonLabel = interactTarget.active ? 'Close' : 'Open';
+        buttonIcon = 'wardrobe';
+        break;
+    }
+  }
+
   return (
     <>
       <StatusBar floorName={floorName} hint="Drag to look" onExit={onExit} />
@@ -129,9 +235,9 @@ function TouchWalkHud({ seatName, isBed = false, seated, lying = false, floorNam
         >
           <button
             type="button"
-            onClick={onToggleSit}
+            onClick={actionHandler}
             className="pc-glass pc-glass--dark"
-            aria-label={isUp ? 'Stand up' : `Sit on ${seatName ?? ''}`}
+            aria-label={isUp ? 'Stand up' : buttonLabel}
             style={{
               minWidth: 88,
               height: 48,
@@ -150,10 +256,10 @@ function TouchWalkHud({ seatName, isBed = false, seated, lying = false, floorNam
               border: '1.5px solid var(--pc-cyan-glow)',
             }}
           >
-            <Icon name={isUp ? 'arrowU' : 'sofa'} size={16} />
-            {isUp ? 'Stand' : 'Sit'}
+            <Icon name={buttonIcon} size={16} />
+            {buttonLabel}
           </button>
-          {!isUp && isBed && onToggleLie && (
+          {!isUp && isBed && onToggleLie && (!interactTarget || interactTarget.kind === 'seat') && (
             <button
               type="button"
               onClick={onToggleLie}

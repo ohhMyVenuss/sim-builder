@@ -27,6 +27,49 @@ export function isSeat(item: Pick<FurnitureItem, 'type'>): boolean {
   return hasSeatSurface(item);
 }
 
+export type InteractiveKind =
+  | 'seat'
+  | 'lamp'
+  | 'tv'
+  | 'water'
+  | 'stove'
+  | 'door'
+  | 'storage';
+
+export function getInteractiveKind(item: Pick<FurnitureItem, 'type'>): InteractiveKind | null {
+  if (isSeat(item)) return 'seat';
+  switch (item.type) {
+    case 'lamp':
+    case 'floor-lamp':
+    case 'pendant-light':
+    case 'lamppost':
+      return 'lamp';
+    case 'tv':
+      return 'tv';
+    case 'kitchen-sink':
+    case 'bathroom-sink':
+    case 'bathtub':
+    case 'shower':
+      return 'water';
+    case 'stove':
+      return 'stove';
+    case 'door':
+      return 'door';
+    case 'wardrobe':
+    case 'cabinet':
+    case 'fridge':
+    case 'dishwasher':
+      return 'storage';
+    default:
+      return null;
+  }
+}
+
+export interface InteractTarget {
+  item: FurnitureItem;
+  kind: InteractiveKind;
+}
+
 interface Point {
   x: number;
   z: number;
@@ -85,6 +128,48 @@ function seatOutdoors(seat: FurnitureItem, at: Point, sight: SeatSight): boolean
 }
 
 /**
+ * Finds the nearest interactable object (seat, lamp, tv, water, stove, door, storage)
+ * in reach and in view of the walker.
+ */
+export function findInteractable(
+  items: readonly FurnitureItem[],
+  x: number,
+  z: number,
+  dirX: number,
+  dirZ: number,
+  sight?: SeatSight
+): InteractTarget | null {
+  let best: InteractTarget | null = null;
+  let bestScore = Infinity;
+  const dirLength = Math.hypot(dirX, dirZ) || 1;
+  for (const item of items) {
+    const at = item.position;
+    if (!at) continue;
+    const kind = getInteractiveKind(item);
+    if (!kind) continue;
+    const reach = kind === 'seat' ? SEAT_REACH : 1.6;
+    const distance = footprintDistance(item, at, x, z);
+    if (distance > reach) continue;
+    const toX = at.x - x;
+    const toZ = at.z - z;
+    const toLength = Math.hypot(toX, toZ);
+    const facing = toLength < 1e-6 ? 1 : (toX * dirX + toZ * dirZ) / (toLength * dirLength);
+    if (distance > SEAT_TOUCHING && facing < SEAT_VIEW_COS) continue;
+    // Prefer what is straight ahead over what is merely nearer.
+    const score = distance - facing * 0.5;
+    if (score >= bestScore) continue;
+    if (sight) {
+      if (Boolean(sight.outside) !== seatOutdoors(item, at, sight)) continue;
+      const targetPoint = kind === 'seat' ? sitPoint(item, at) : at;
+      if (sightBlocked(sight.colliders, x, z, targetPoint.x, targetPoint.z, sight.feetY)) continue;
+    }
+    best = { item, kind };
+    bestScore = score;
+  }
+  return best;
+}
+
+/**
  * The seat the walker at (x, z), facing (dirX, dirZ), would sit on: the
  * nearest one in reach that is in view, or right beside it. Null when none.
  * With `sight`, a seat behind a wall or a partition is not in reach, and
@@ -98,32 +183,9 @@ export function findSeat(
   dirZ: number,
   sight?: SeatSight
 ): FurnitureItem | null {
-  let best: FurnitureItem | null = null;
-  let bestScore = Infinity;
-  const dirLength = Math.hypot(dirX, dirZ) || 1;
-  for (const item of items) {
-    const at = item.position;
-    if (!at || !isSeat(item)) continue;
-    const distance = footprintDistance(item, at, x, z);
-    if (distance > SEAT_REACH) continue;
-    const toX = at.x - x;
-    const toZ = at.z - z;
-    const toLength = Math.hypot(toX, toZ);
-    const facing = toLength < 1e-6 ? 1 : (toX * dirX + toZ * dirZ) / (toLength * dirLength);
-    if (distance > SEAT_TOUCHING && facing < SEAT_VIEW_COS) continue;
-    // Prefer what is straight ahead over what is merely nearer.
-    const score = distance - facing * 0.5;
-    if (score >= bestScore) continue;
-    if (sight) {
-      // Sitting never crosses the shell: the view stays indoors or out.
-      if (Boolean(sight.outside) !== seatOutdoors(item, at, sight)) continue;
-      const seatAt = sitPoint(item, at);
-      if (sightBlocked(sight.colliders, x, z, seatAt.x, seatAt.z, sight.feetY)) continue;
-    }
-    best = item;
-    bestScore = score;
-  }
-  return best;
+  const seats = items.filter((item) => isSeat(item));
+  const target = findInteractable(seats, x, z, dirX, dirZ, sight);
+  return target?.kind === 'seat' ? target.item : null;
 }
 
 export interface SeatPose {

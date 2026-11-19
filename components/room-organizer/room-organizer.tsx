@@ -1173,6 +1173,7 @@ export function RoomOrganizer(): JSX.Element {
     invalidate,
     canvasRef,
     threeModuleRef,
+    sceneRef,
     cameraRef,
     orbitRef: controlsRef,
     building: walkBuilding,
@@ -1676,11 +1677,13 @@ export function RoomOrganizer(): JSX.Element {
                 isBed: walk.isBed,
                 seated: walk.seated,
                 lying: walk.lying,
+                interactTarget: walk.interactTarget,
                 floorName: activeFloor.name,
                 multiFloor: layout.floors.length > 1,
                 onStick: walk.setStick,
                 onToggleSit: walk.toggleSit,
                 onToggleLie: walk.toggleLie,
+                onToggleInteract: walk.toggleInteract,
                 onExit: exitWalkthrough,
               }
             : null

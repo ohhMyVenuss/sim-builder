@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { prefersReducedMotion } from '../lib/reduced-motion';
 import { WALK_FOV_DEG } from '../lib/scene-insets';
 import { groundHeightAt } from '../lib/site';
+import { playSound } from '../lib/sounds';
 import {
   advanceWalker,
   buildWalkerColliders,
@@ -10,7 +11,13 @@ import {
   type WalkerState,
 } from '../lib/walk-collision';
 import { interacts, interactsLie, isTypingTarget, releasesHeldKeys, startsWalking, walkFrameSeconds } from '../lib/walk-input';
-import { bedLiePose, findSeat, seatPose } from '../lib/walk-interact';
+import {
+  bedLiePose,
+  findInteractable,
+  seatPose,
+  type InteractiveKind,
+  type InteractTarget,
+} from '../lib/walk-interact';
 import { walkArrival, walkSpawn, type WalkPose } from '../lib/walk-spawn';
 import {
   buildWalkWorld,
@@ -39,6 +46,7 @@ export interface UseWalkthroughOptions {
   enabled: boolean;
   canvasRef: React.RefObject<HTMLCanvasElement>;
   threeModuleRef: React.MutableRefObject<ThreeModule | null>;
+  sceneRef?: React.MutableRefObject<ThreeNS.Scene | null>;
   cameraRef: React.MutableRefObject<ThreeNS.PerspectiveCamera | null>;
   orbitRef: React.MutableRefObject<OrbitControlsType | null>;
   walkSpeed?: number;
@@ -75,6 +83,14 @@ export interface UseWalkthroughResult {
   isBed: boolean;
   seated: boolean;
   lying: boolean;
+  /** The interactable target currently in reach and view, if any. */
+  interactTarget: {
+    id: string;
+    name: string;
+    type: string;
+    kind: InteractiveKind;
+    active: boolean;
+  } | null;
   /** The walker is out on the lot (or in the porch): the whole house is drawn (#446). */
   outside: boolean;
   /**
@@ -90,6 +106,8 @@ export interface UseWalkthroughResult {
   toggleSit(): void;
   /** Lie down on the bed in reach, or stand up (`F`, or the HUD's button on touch). */
   toggleLie(): void;
+  /** Primary interaction (`E`, or the HUD's button): toggles seats, doors, lamps, TV, appliances, sinks. */
+  toggleInteract(): void;
 }
 
 /** Shoulder-width walker: wide enough that the camera's near plane never pokes
@@ -122,11 +140,117 @@ interface WalkSession {
   seated: { x: number; z: number } | null;
   posture: 'standing' | 'seated' | 'lying';
   seatTargetId: string | null;
+  interactTargetId: string | null;
+  interactTarget: InteractTarget | null;
   outside: boolean;
   nearStairs: boolean;
   /** The floor the walker last reported, and the reports React hasn't echoed yet. */
   reportedFloor: number;
   pendingFloors: number[];
+}
+
+function applyVisualInteraction(
+  scene: ThreeNS.Scene | null | undefined,
+  THREE: ThreeModule | null | undefined,
+  target: InteractTarget,
+  active: boolean
+): void {
+  if (!scene || !THREE) return;
+  const group = scene.children.find(
+    (child) => child.userData?.type === 'furniture' && child.userData?.id === target.item.id
+  ) as ThreeNS.Group | undefined;
+  if (!group) return;
+
+  const { kind, item } = target;
+  if (kind === 'door') {
+    const slab = group.children[0];
+    if (slab) {
+      slab.rotation.y = active ? Math.PI * 0.45 : 0;
+      slab.position.x = active ? -item.width * 0.35 : 0;
+      slab.position.z = active ? item.width * 0.35 : 0;
+    }
+  } else if (kind === 'lamp') {
+    const light = group.getObjectByName('interactive-lamp-light') as ThreeNS.PointLight | null;
+    if (active) {
+      if (!light) {
+        const newLight = new THREE.PointLight(0xfff1c5, 2.5, 8.0);
+        newLight.name = 'interactive-lamp-light';
+        newLight.position.set(0, item.height * 0.85, 0);
+        group.add(newLight);
+      } else {
+        light.visible = true;
+      }
+    } else if (light) {
+      light.visible = false;
+    }
+  } else if (kind === 'tv') {
+    group.traverse((child) => {
+      const meshObj = child as ThreeNS.Mesh;
+      if (meshObj.isMesh && meshObj.material) {
+        const mat = meshObj.material as ThreeNS.MeshStandardMaterial;
+        if (meshObj.position.y > 0.2 || mat.name === 'screen') {
+          if (active) {
+            mat.emissive?.setHex(0x38bdf8);
+            mat.emissiveIntensity = 1.2;
+          } else {
+            mat.emissive?.setHex(0x000000);
+            mat.emissiveIntensity = 0;
+          }
+        }
+      }
+    });
+  } else if (kind === 'stove') {
+    const fire = group.getObjectByName('interactive-stove-fire') as ThreeNS.Group | null;
+    if (active) {
+      if (!fire) {
+        const newFire = new THREE.Group();
+        newFire.name = 'interactive-stove-fire';
+        const burnerGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.02, 16);
+        const burnerMat = new THREE.MeshStandardMaterial({
+          color: 0xff3b00,
+          emissive: 0xff3b00,
+          emissiveIntensity: 2.5,
+        });
+        const b1 = new THREE.Mesh(burnerGeo, burnerMat);
+        b1.position.set(-item.width * 0.22, item.height + 0.01, 0);
+        const b2 = new THREE.Mesh(burnerGeo, burnerMat);
+        b2.position.set(item.width * 0.22, item.height + 0.01, 0);
+        newFire.add(b1, b2);
+        group.add(newFire);
+      } else {
+        fire.visible = true;
+      }
+    } else if (fire) {
+      fire.visible = false;
+    }
+  } else if (kind === 'water') {
+    const water = group.getObjectByName('interactive-water-mesh') as ThreeNS.Mesh | null;
+    if (active) {
+      if (!water) {
+        const waterGeo = new THREE.BoxGeometry(item.width * 0.4, 0.02, item.depth * 0.4);
+        const waterMat = new THREE.MeshStandardMaterial({
+          color: 0x38bdf8,
+          roughness: 0.1,
+          metalness: 0.2,
+          transparent: true,
+          opacity: 0.75,
+        });
+        const newWater = new THREE.Mesh(waterGeo, waterMat);
+        newWater.name = 'interactive-water-mesh';
+        newWater.position.set(0, item.height * 0.8, 0);
+        group.add(newWater);
+      } else {
+        water.visible = true;
+      }
+    } else if (water) {
+      water.visible = false;
+    }
+  } else if (kind === 'storage') {
+    const door = group.children[0];
+    if (door) {
+      door.position.z = active ? item.depth * 0.25 : 0;
+    }
+  }
 }
 
 /**
@@ -152,6 +276,7 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
     enabled,
     canvasRef,
     threeModuleRef,
+    sceneRef,
     cameraRef,
     orbitRef,
     walkSpeed = 3.0,
@@ -168,6 +293,14 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
   const [isBed, setIsBed] = useState(false);
   const [seated, setSeated] = useState(false);
   const [lying, setLying] = useState(false);
+  const [interactTarget, setInteractTarget] = useState<{
+    id: string;
+    name: string;
+    type: string;
+    kind: InteractiveKind;
+    active: boolean;
+  } | null>(null);
+  const activeInteractionsRef = useRef<Set<string>>(new Set());
   const [outside, setOutside] = useState(false);
   const [nearStairs, setNearStairs] = useState(false);
   const [lampStorey, setLampStorey] = useState(activeFloorIndex);
@@ -214,6 +347,8 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
     seated: null,
     posture: 'standing',
     seatTargetId: null,
+    interactTargetId: null,
+    interactTarget: null,
     outside: false,
     nearStairs: false,
     reportedFloor: 0,
@@ -222,6 +357,7 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
   // Set by the init effect while the mode runs; the HUD's buttons call them.
   const toggleSitRef = useRef<(() => void) | null>(null);
   const toggleLieRef = useRef<(() => void) | null>(null);
+  const toggleInteractRef = useRef<(() => void) | null>(null);
   const arriveRef = useRef<((floorIndex: number) => void) | null>(null);
 
   useEffect(() => {
@@ -413,11 +549,49 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
       startTransition(pose.x, pose.eyeY, pose.z, pose.lookX, pose.lookY, pose.lookZ);
     };
 
-    const toggleSit = (): void => {
+    const toggleInteract = (): void => {
       if (transition.active) return;
-      if (session.seated) standUp();
-      else sitDown();
+      if (session.seated) {
+        standUp();
+        invalidateRef.current?.();
+        return;
+      }
+      const target = session.interactTarget;
+      if (!target) return;
+      if (target.kind === 'seat') {
+        sitDown();
+      } else {
+        const id = target.item.id;
+        const willBeActive = !activeInteractionsRef.current.has(id);
+        if (willBeActive) {
+          activeInteractionsRef.current.add(id);
+        } else {
+          activeInteractionsRef.current.delete(id);
+        }
+        if (target.kind === 'lamp' || target.kind === 'door' || target.kind === 'storage') {
+          playSound('rotate');
+        } else if (target.kind === 'tv') {
+          playSound('success');
+        } else if (target.kind === 'water') {
+          playSound('place');
+        } else if (target.kind === 'stove') {
+          playSound('remove');
+        }
+        applyVisualInteraction(sceneRef?.current, threeModuleRef.current, target, willBeActive);
+        setInteractTarget({
+          id: target.item.id,
+          name: target.item.name,
+          type: target.item.type,
+          kind: target.kind,
+          active: willBeActive,
+        });
+      }
       invalidateRef.current?.();
+    };
+    toggleInteractRef.current = toggleInteract;
+
+    const toggleSit = (): void => {
+      toggleInteract();
     };
     toggleSitRef.current = toggleSit;
 
@@ -440,7 +614,7 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
         // Keys walk under the pointer lock, not in touch mode.
         if (!controls?.isLocked) session.touch = false;
       }
-      else if (interacts(event) && walking()) toggleSit();
+      else if (interacts(event) && walking()) toggleInteract();
       else if (interactsLie(event) && walking()) {
         if (session.seated) standUp();
         else {
@@ -647,12 +821,12 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
           }
         }
 
-        // What's in reach to sit on, for the HUD's prompt (#463b).
+        // What's in reach to interact with, for the HUD's prompt.
         if (!session.seated && now - lastSeatLookup > SEAT_LOOKUP_MS) {
           lastSeatLookup = now;
           camera.getWorldDirection(forward);
           // Never through a wall, nor across the shell (#566).
-          const seat = findSeat(itemsRef.current, walker.x, walker.z, forward.x, forward.z, {
+          const target = findInteractable(itemsRef.current, walker.x, walker.z, forward.x, forward.z, {
             colliders: collidersRef.current[walker.floorIndex] ?? NO_COLLIDERS,
             feetY: walker.y,
             outside: walker.kind === 'ground',
@@ -668,11 +842,24 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
                 }
               : {}),
           });
-          const id = seat?.id ?? null;
-          if (id !== session.seatTargetId) {
-            session.seatTargetId = id;
-            setSeatName(seat?.name ?? null);
-            setIsBed(seat?.type === 'bed');
+          const id = target?.item.id ?? null;
+          if (id !== session.interactTargetId) {
+            session.interactTargetId = id;
+            session.interactTarget = target;
+            session.seatTargetId = target?.kind === 'seat' ? id : null;
+            setSeatName(target?.kind === 'seat' ? target.item.name : null);
+            setIsBed(target?.item.type === 'bed');
+            setInteractTarget(
+              target
+                ? {
+                    id: target.item.id,
+                    name: target.item.name,
+                    type: target.item.type,
+                    kind: target.kind,
+                    active: activeInteractionsRef.current.has(target.item.id),
+                  }
+                : null
+            );
           }
         }
 
@@ -696,6 +883,10 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
       setLying(false);
       setSeatName(null);
       setIsBed(false);
+      setInteractTarget(null);
+      session.seatTargetId = null;
+      session.interactTargetId = null;
+      session.interactTarget = null;
       setOutside(false);
       setNearStairs(false);
       session.outside = false;
@@ -749,6 +940,7 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
   }, []);
   const toggleSit = useCallback(() => toggleSitRef.current?.(), []);
   const toggleLie = useCallback(() => toggleLieRef.current?.(), []);
+  const toggleInteract = useCallback(() => toggleInteractRef.current?.(), []);
 
   return {
     lockRefused,
@@ -757,11 +949,13 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
     isBed: seated || lying ? false : isBed,
     seated,
     lying,
+    interactTarget: seated || lying ? null : interactTarget,
     outside,
     nearStairs,
     lampStorey,
     setStick,
     toggleSit,
     toggleLie,
+    toggleInteract,
   };
 }

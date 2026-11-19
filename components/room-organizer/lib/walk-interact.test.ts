@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { findNpcSeats } from './npc-seats';
 import { buildWalkerColliders } from './walk-collision';
-import { SEATED_EYE, bedLiePose, findSeat, isSeat, seatPose } from './walk-interact';
+import { SEATED_EYE, bedLiePose, findInteractable, findSeat, isSeat, seatPose } from './walk-interact';
 import type { FurnitureItem } from './types';
 
 function item(overrides: Partial<FurnitureItem> & { type: string; position: { x: number; z: number } }): FurnitureItem {
@@ -198,5 +198,29 @@ describe('bedLiePose', () => {
 
   it('returns null for a non-bed', () => {
     expect(bedLiePose(SOFA, 0)).toBeNull();
+  });
+});
+
+describe('findInteractable — interactive objects beyond seats', () => {
+  const LAMP = item({ id: 'lamp', type: 'lamp', name: 'Floor Lamp', width: 0.3, depth: 0.3, height: 1.5, position: { x: 0, z: -1.0 } });
+  const TV_ITEM = item({ id: 'tv', type: 'tv', name: 'TV Stand', width: 1.5, depth: 0.4, height: 0.5, position: { x: 0, z: 2.0 }, rotation: Math.PI });
+  const SINK = item({ id: 'sink', type: 'kitchen-sink', name: 'Sink', width: 0.9, depth: 0.6, height: 0.9, position: { x: 2.0, z: 0 }, rotation: -Math.PI / 2 });
+  const STOVE = item({ id: 'stove', type: 'stove', name: 'Stove', width: 0.7, depth: 0.7, height: 0.9, position: { x: -2.0, z: 0 }, rotation: Math.PI / 2 });
+  const DOOR = item({ id: 'door', type: 'door', name: 'Door', width: 0.9, depth: 0.12, height: 2.05, position: { x: 0, z: -4.0 }, rotation: 0 });
+  const WARDROBE = item({ id: 'wardrobe', type: 'wardrobe', name: 'Wardrobe', width: 1.4, depth: 0.6, height: 2.1, position: { x: 0, z: 4.0 }, rotation: Math.PI });
+
+  it('detects lamp in view', () => {
+    const res = findInteractable([LAMP], 0, 0, 0, -1);
+    expect(res).not.toBeNull();
+    expect(res!.kind).toBe('lamp');
+    expect(res!.item.id).toBe('lamp');
+  });
+
+  it('detects tv, sink, stove, door, and wardrobe', () => {
+    expect(findInteractable([TV_ITEM], 0, 1.0, 0, 1)?.kind).toBe('tv');
+    expect(findInteractable([SINK], 1.0, 0, 1, 0)?.kind).toBe('water');
+    expect(findInteractable([STOVE], -1.0, 0, -1, 0)?.kind).toBe('stove');
+    expect(findInteractable([DOOR], 0, -3.0, 0, -1)?.kind).toBe('door');
+    expect(findInteractable([WARDROBE], 0, 3.0, 0, 1)?.kind).toBe('storage');
   });
 });

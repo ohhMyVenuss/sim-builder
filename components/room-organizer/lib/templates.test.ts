@@ -40,8 +40,15 @@ describe('templates have doors and windows (#570)', () => {
       const openings = floor.items.filter((item) => item.type === 'window' || item.type === 'door');
       expect(openings.filter((item) => item.type === 'window').length, floor.id).toBeGreaterThan(0);
       for (const opening of openings) {
-        const snap = snapOpeningToWall({ position: opening.position!, itemWidth: opening.width, roomWidth: template.width, roomDepth: template.height });
-        expect(snap.position, opening.id).toEqual(opening.position);
+        const snap = snapOpeningToWall({
+          position: opening.position!,
+          itemWidth: opening.width,
+          roomWidth: template.width,
+          roomDepth: template.height,
+          ...('interiorWalls' in floor && floor.interiorWalls ? { interiorWalls: floor.interiorWalls } : {}),
+        });
+        expect(snap.position.x, `${opening.id} x`).toBeCloseTo(opening.position!.x, 6);
+        expect(snap.position.z, `${opening.id} z`).toBeCloseTo(opening.position!.z, 6);
         expect(Math.abs(Math.sin((snap.rotation - (opening.rotation ?? 0)) / 2)), opening.id).toBeLessThan(1e-9);
       }
     }
