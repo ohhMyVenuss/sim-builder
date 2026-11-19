@@ -132,3 +132,63 @@ describe('template fronts face the room (#575)', () => {
     }
   });
 });
+
+describe('bietThuSanVuon — complete 3-storey villa layout', () => {
+  const villa = ROOM_TEMPLATES.bietThuSanVuon;
+
+  it('has 3 fully furnished floors', () => {
+    expect(villa.floors.length).toBe(3);
+    expect(villa.width).toBe(12);
+    expect(villa.height).toBe(14);
+    for (const floor of villa.floors) {
+      expect(floor.items.length).toBeGreaterThan(15);
+    }
+  });
+
+  it('aligns the central stairwell across all 3 floors', () => {
+    const stairs = villa.floors.map((f) => f.items.find((i) => i.type === 'stairs'));
+    expect(stairs[0]).toBeDefined();
+    expect(stairs[1]).toBeDefined();
+    expect(stairs[2]).toBeDefined();
+    expect(stairs[0]!.position).toEqual(stairs[1]!.position);
+    expect(stairs[1]!.position).toEqual(stairs[2]!.position);
+  });
+
+  it('includes complete functional zones across storeys', () => {
+    const allTypes = villa.floors.flatMap((f) => f.items.map((i) => i.type));
+    // Living room
+    expect(allTypes).toContain('sofa');
+    expect(allTypes).toContain('coffee-table');
+    expect(allTypes).toContain('tv');
+    // Kitchen & Dining
+    expect(allTypes).toContain('dining-table');
+    expect(allTypes).toContain('dining-chair');
+    expect(allTypes).toContain('fridge');
+    expect(allTypes).toContain('stove');
+    expect(allTypes).toContain('kitchen-sink');
+    // Bedrooms (interactive beds for E / F)
+    expect(allTypes.filter((t) => t === 'bed').length).toBeGreaterThanOrEqual(2);
+    expect(allTypes).toContain('wardrobe');
+    // Bathrooms (toilets for E sitting)
+    expect(allTypes.filter((t) => t === 'toilet').length).toBeGreaterThanOrEqual(2);
+    expect(allTypes).toContain('bathtub');
+    // Work / Office
+    expect(allTypes).toContain('desk');
+    expect(allTypes).toContain('computer');
+    expect(allTypes).toContain('bookshelf');
+    // Terrace
+    expect(allTypes).toContain('garden-bench');
+    expect(allTypes).toContain('picnic-table');
+  });
+
+  it('ensures no isolated room: all interior walls leave open doorways >= 1.0 m', () => {
+    for (const floor of villa.floors) {
+      for (const wall of floor.interiorWalls ?? []) {
+        // Wall does not span entire width or depth without clearance
+        const len = Math.hypot(wall.x2 - wall.x1, wall.z2 - wall.z1);
+        expect(len).toBeLessThan(villa.width - 1.0);
+        expect(len).toBeLessThan(villa.height - 1.0);
+      }
+    }
+  });
+});

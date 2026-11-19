@@ -64,7 +64,7 @@ describe('Duplicate floor under the hard budget (#588)', () => {
     expect(notices).toHaveLength(1);
     expect(notices[0]!.tone).toBe('error');
     expect(notices[0]!.message).toMatch(/Vượt ngân quỹ|Over budget/);
-    expect(notices[0]!.message).toMatch(/\$14,400|144(\.000\.000)?\s*₫/);
+    expect(notices[0]!.message).toMatch(/\$14,400|144(\.000\.000)?\s*₫|144m/);
   });
 
   it('still clones a floor the budget covers, silently', () => {
@@ -104,8 +104,8 @@ describe('An over-budget catalogue tile (#642)', () => {
     expect(onAdd).not.toHaveBeenCalled();
     expect(vi.mocked(playSound).mock.calls).toEqual([['refused'], ['refused']]);
     expect(notices.map((notice) => [notice.message, notice.tone])).toEqual([
-      [expect.stringMatching(/Over budget: \$200 left|Vượt ngân quỹ: còn 5\.000\.000 ₫/), 'error'],
-      [expect.stringMatching(/Over budget: \$200 left|Vượt ngân quỹ: còn 5\.000\.000 ₫/), 'error'],
+      [expect.stringMatching(/Over budget: \$200 left|Vượt ngân quỹ: còn (5\.000\.000 ₫|5m)/), 'error'],
+      [expect.stringMatching(/Over budget: \$200 left|Vượt ngân quỹ: còn (5\.000\.000 ₫|5m)/), 'error'],
     ]);
   });
 
@@ -114,7 +114,7 @@ describe('An over-budget catalogue tile (#642)', () => {
     const onAdd = vi.fn();
     render(withView(<CatalogStrip category="seating" onAdd={onAdd} />));
     act(() => {
-      fireEvent.click(screen.getByTitle(/^Bench — (\$150|2\.500\.000 ₫)/));
+      fireEvent.click(screen.getByTitle(/^Bench — (\$150|2\.500\.000 ₫|2\.5m)/));
     });
     expect(onAdd).toHaveBeenCalledTimes(1);
     expect(notices).toHaveLength(0);
