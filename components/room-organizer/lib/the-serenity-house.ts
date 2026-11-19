@@ -1,0 +1,219 @@
+import type { FloorLayout, RoomLayout } from './types';
+
+const WIDTH = 12;
+const DEPTH = 14;
+
+function templateOpening(
+  id: string,
+  type: 'door' | 'window',
+  wall: 'north' | 'south' | 'east' | 'west',
+  along: number,
+  room: { width: number; depth: number }
+): FloorLayout['items'][number] {
+  const catalog =
+    type === 'door'
+      ? { name: 'Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 150 }
+      : { name: 'Window', width: 1.2, depth: 0.12, height: 1.2, color: '#90CAF9', icon: '🪟', price: 200 };
+  const halfW = room.width / 2;
+  const halfD = room.depth / 2;
+  const seat =
+    wall === 'north'
+      ? { position: { x: along, z: -halfD }, rotation: 0 }
+      : wall === 'south'
+        ? { position: { x: along, z: halfD }, rotation: Math.PI }
+        : wall === 'east'
+          ? { position: { x: halfW, z: along }, rotation: -Math.PI / 2 }
+          : { position: { x: -halfW, z: along }, rotation: Math.PI / 2 };
+  return { id, type, category: 'structure', ...catalog, ...seat };
+}
+
+export const THE_SERENITY_HOUSE: RoomLayout = {
+  id: 'the-serenity-house',
+  name: 'THE SERENITY HOUSE',
+  width: WIDTH,
+  height: DEPTH,
+  roof: {
+    style: 'flat',
+    color: '#77736C',
+  },
+  floors: [
+    {
+      id: 'ground',
+      name: 'Tầng 1 — Tiền sảnh, Đại sảnh phòng khách, Bếp & Bàn ăn, Phòng ngủ khách & Sân vườn',
+      floorColor: '#F2EFE9',
+      floorPattern: 'tile',
+      interiorWalls: [
+        { id: 'w-g-liv-e', x1: -0.6, z1: -6.8, x2: -0.6, z2: -1.0, thickness: 0.1 },
+        { id: 'w-g-screen', x1: -0.6, z1: 0.8, x2: -0.6, z2: 3.5, thickness: 0.1 },
+        { id: 'w-g-guest-w', x1: 2.4, z1: -6.8, x2: 2.4, z2: -2.2, thickness: 0.1 },
+        { id: 'w-g-guest-s', x1: 2.4, z1: -2.2, x2: 5.8, z2: -2.2, thickness: 0.1 },
+        { id: 'w-g-wc-n', x1: 2.2, z1: 3.5, x2: 5.8, z2: 3.5, thickness: 0.1 },
+        { id: 'w-g-wc-w', x1: 2.2, z1: 3.5, x2: 2.2, z2: 6.8, thickness: 0.1 },
+        { id: 'w-g-laund-n', x1: 2.2, z1: 0.8, x2: 5.8, z2: 0.8, thickness: 0.1 },
+        { id: 'w-g-laund-w', x1: 2.2, z1: 0.8, x2: 2.2, z2: 3.5, thickness: 0.1 },
+      ],
+      items: [
+        // Exterior Doors & Openings
+        templateOpening('serenity-door-main', 'door', 'north', 1.4, { width: WIDTH, depth: DEPTH }),
+        templateOpening('serenity-door-garden', 'door', 'south', -0.5, { width: WIDTH, depth: DEPTH }),
+        // Interior Doors
+        { id: 'door-g-liv', type: 'door', category: 'structure', name: 'Living Room Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000, position: { x: -0.6, z: -2.0 }, rotation: -Math.PI / 2 },
+        { id: 'door-g-guest', type: 'door', category: 'structure', name: 'Guest Bedroom Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000, position: { x: 3.2, z: -2.2 }, rotation: 0 },
+        { id: 'door-g-laund', type: 'door', category: 'structure', name: 'Laundry Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000, position: { x: 3.2, z: 0.8 }, rotation: 0 },
+        { id: 'door-g-wc', type: 'door', category: 'structure', name: 'Guest Bathroom Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000, position: { x: 3.2, z: 3.5 }, rotation: 0 },
+        // Windows
+        templateOpening('win-g-n1', 'window', 'north', -3.5, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-g-n2', 'window', 'north', 3.8, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-g-w1', 'window', 'west', -4.0, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-g-w2', 'window', 'west', 3.5, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-g-s1', 'window', 'south', -3.5, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-g-e1', 'window', 'east', -4.5, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-g-e2', 'window', 'east', 5.0, { width: WIDTH, depth: DEPTH }),
+        // Stairs
+        { id: 'g-stairs', type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#374151', icon: '🪜', price: 35_000_000, position: { x: 0.8, z: -0.5 }, rotation: 0 },
+        // Foyer
+        { id: 'g-foyer-table', type: 'coffee-table', category: 'tables', name: 'Console Table', width: 1.0, depth: 0.4, height: 0.8, color: '#1F2937', icon: '🟫', price: 4_500_000, position: { x: 0.2, z: -5.0 }, rotation: 0 },
+        { id: 'g-foyer-plant', type: 'plant', category: 'decor', name: 'Welcome Ficus', width: 0.4, depth: 0.4, height: 1.2, color: '#15803D', icon: '🪴', price: 1_800_000, position: { x: -0.2, z: -6.2 }, rotation: 0 },
+        { id: 'g-foyer-light', type: 'pendant-light', category: 'decor', name: 'Pendant Chandelier', width: 0.5, depth: 0.5, height: 0.8, color: '#FFC107', icon: '💡', price: 5_500_000, position: { x: 0.8, z: -4.5 }, rotation: 0 },
+        // Living Room
+        { id: 'g-sofa', type: 'sofa', category: 'seating', name: 'Grand Sectional Sofa', width: 2.2, depth: 0.95, height: 0.85, color: '#1F2937', icon: '🛋️', price: 28_000_000, position: { x: -3.5, z: -4.8 }, rotation: 0, sofaShape: 'standard' },
+        { id: 'g-armchair1', type: 'armchair', category: 'seating', name: 'Lounge Armchair', width: 0.9, depth: 0.9, height: 0.85, color: '#374151', icon: '💺', price: 8_500_000, position: { x: -5.0, z: -3.5 }, rotation: Math.PI / 4 },
+        { id: 'g-armchair2', type: 'armchair', category: 'seating', name: 'Lounge Armchair', width: 0.9, depth: 0.9, height: 0.85, color: '#374151', icon: '💺', price: 8_500_000, position: { x: -2.0, z: -3.5 }, rotation: -Math.PI / 4 },
+        { id: 'g-coffee', type: 'coffee-table', category: 'tables', name: 'Marble Coffee Table', width: 1.3, depth: 0.7, height: 0.42, color: '#111827', icon: '🟫', price: 6_500_000, position: { x: -3.5, z: -3.5 }, rotation: 0 },
+        { id: 'g-rug', type: 'rug', category: 'decor', name: 'Designer Rug', width: 2.8, depth: 2.0, height: 0.02, color: '#9CA3AF', icon: '🟥', price: 7_500_000, position: { x: -3.5, z: -3.8 }, rotation: 0 },
+        { id: 'g-tv', type: 'tv', category: 'electronics', name: 'OLED Smart TV', width: 1.8, depth: 0.4, height: 0.55, color: '#111827', icon: '📺', price: 32_000_000, position: { x: -3.5, z: -1.6 }, rotation: Math.PI },
+        { id: 'g-lamp1', type: 'floor-lamp', category: 'electronics', name: 'Arched Floor Lamp', width: 0.4, depth: 0.4, height: 1.8, color: '#F59E0B', icon: '🪔', price: 4_200_000, position: { x: -5.2, z: -5.8 }, rotation: 0 },
+        { id: 'g-plant1', type: 'plant', category: 'decor', name: 'Monstera Plant', width: 0.45, depth: 0.45, height: 1.2, color: '#15803D', icon: '🪴', price: 1_800_000, position: { x: -1.4, z: -5.8 }, rotation: 0 },
+        // Guest Bedroom
+        { id: 'g-bed', type: 'bed', category: 'bedroom', name: 'Guest Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 15_000_000, position: { x: 4.1, z: -5.5 }, rotation: 0 },
+        { id: 'g-night1', type: 'nightstand', category: 'bedroom', name: 'Nightstand', width: 0.5, depth: 0.4, height: 0.6, color: '#374151', icon: '🕯️', price: 2_500_000, position: { x: 2.8, z: -5.5 }, rotation: 0 },
+        { id: 'g-night2', type: 'nightstand', category: 'bedroom', name: 'Nightstand', width: 0.5, depth: 0.4, height: 0.6, color: '#374151', icon: '🕯️', price: 2_500_000, position: { x: 5.4, z: -5.5 }, rotation: 0 },
+        { id: 'g-lamp-g1', type: 'lamp', category: 'electronics', name: 'Bedside Lamp', width: 0.3, depth: 0.3, height: 0.5, color: '#FFD700', icon: '💡', price: 1_500_000, position: { x: 2.8, z: -5.5 }, rotation: 0 },
+        { id: 'g-lamp-g2', type: 'lamp', category: 'electronics', name: 'Bedside Lamp', width: 0.3, depth: 0.3, height: 0.5, color: '#FFD700', icon: '💡', price: 1_500_000, position: { x: 5.4, z: -5.5 }, rotation: 0 },
+        { id: 'g-wardrobe-guest', type: 'wardrobe', category: 'bedroom', name: 'Guest Wardrobe', width: 1.4, depth: 0.6, height: 2.1, color: '#374151', icon: '🚪', price: 14_000_000, position: { x: 5.2, z: -3.5 }, rotation: -Math.PI / 2 },
+        { id: 'g-desk-guest', type: 'desk', category: 'tables', name: 'Vanity Desk', width: 1.2, depth: 0.6, height: 0.75, color: '#1F2937', icon: '🖥️', price: 5_500_000, position: { x: 3.4, z: -3.2 }, rotation: Math.PI },
+        { id: 'g-chair-guest', type: 'chair', category: 'seating', name: 'Vanity Chair', width: 0.5, depth: 0.5, height: 0.85, color: '#4B5563', icon: '🪑', price: 1_800_000, position: { x: 3.4, z: -3.9 }, rotation: 0 },
+        // Kitchen & Dining
+        { id: 'g-fridge', type: 'fridge', category: 'kitchen', name: 'French Door Refrigerator', width: 0.8, depth: 0.75, height: 1.85, color: '#E5E7EB', icon: '🧊', price: 35_000_000, position: { x: -5.0, z: 6.2 }, rotation: Math.PI },
+        { id: 'g-counter1', type: 'counter', category: 'kitchen', name: 'Kitchen Counter', width: 0.9, depth: 0.6, height: 0.9, color: '#D1D5DB', icon: '🟫', price: 8_500_000, position: { x: -3.9, z: 6.2 }, rotation: Math.PI },
+        { id: 'g-stove', type: 'stove', category: 'kitchen', name: 'Induction Cooktop', width: 0.8, depth: 0.65, height: 0.9, color: '#1F2937', icon: '🍳', price: 22_000_000, position: { x: -2.8, z: 6.2 }, rotation: Math.PI },
+        { id: 'g-counter2', type: 'counter', category: 'kitchen', name: 'Kitchen Counter', width: 0.9, depth: 0.6, height: 0.9, color: '#D1D5DB', icon: '🟫', price: 8_500_000, position: { x: -1.7, z: 6.2 }, rotation: Math.PI },
+        { id: 'g-sink', type: 'kitchen-sink', category: 'kitchen', name: 'Double Basin Sink', width: 0.9, depth: 0.6, height: 0.9, color: '#9CA3AF', icon: '🚰', price: 12_000_000, position: { x: -0.6, z: 6.2 }, rotation: Math.PI },
+        { id: 'g-island', type: 'counter', category: 'kitchen', name: 'Kitchen Island', width: 1.5, depth: 0.8, height: 0.9, color: '#D1D5DB', icon: '🟫', price: 15_000_000, position: { x: -3.0, z: 4.8 }, rotation: 0 },
+        { id: 'g-dining', type: 'dining-table', category: 'tables', name: 'Solid Oak Dining Table', width: 1.8, depth: 1.0, height: 0.75, color: '#92400E', icon: '🟫', price: 18_000_000, position: { x: -3.2, z: 2.2 }, rotation: 0 },
+        { id: 'g-dchair1', type: 'dining-chair', category: 'seating', name: 'Dining Chair', width: 0.45, depth: 0.45, height: 0.9, color: '#78350F', icon: '🪑', price: 2_200_000, position: { x: -4.1, z: 2.2 }, rotation: Math.PI / 2 },
+        { id: 'g-dchair2', type: 'dining-chair', category: 'seating', name: 'Dining Chair', width: 0.45, depth: 0.45, height: 0.9, color: '#78350F', icon: '🪑', price: 2_200_000, position: { x: -2.3, z: 2.2 }, rotation: -Math.PI / 2 },
+        { id: 'g-dchair3', type: 'dining-chair', category: 'seating', name: 'Dining Chair', width: 0.45, depth: 0.45, height: 0.9, color: '#78350F', icon: '🪑', price: 2_200_000, position: { x: -3.7, z: 1.4 }, rotation: 0 },
+        { id: 'g-dchair4', type: 'dining-chair', category: 'seating', name: 'Dining Chair', width: 0.45, depth: 0.45, height: 0.9, color: '#78350F', icon: '🪑', price: 2_200_000, position: { x: -2.7, z: 1.4 }, rotation: 0 },
+        { id: 'g-dchair5', type: 'dining-chair', category: 'seating', name: 'Dining Chair', width: 0.45, depth: 0.45, height: 0.9, color: '#78350F', icon: '🪑', price: 2_200_000, position: { x: -3.7, z: 3.0 }, rotation: Math.PI },
+        { id: 'g-dchair6', type: 'dining-chair', category: 'seating', name: 'Dining Chair', width: 0.45, depth: 0.45, height: 0.9, color: '#78350F', icon: '🪑', price: 2_200_000, position: { x: -2.7, z: 3.0 }, rotation: Math.PI },
+        // Guest Bathroom
+        { id: 'g-toilet', type: 'toilet', category: 'bathroom', name: 'Smart Toilet', width: 0.4, depth: 0.7, height: 0.8, color: '#FFFFFF', icon: '🚽', price: 12_000_000, position: { x: 5.0, z: 6.2 }, rotation: Math.PI },
+        { id: 'g-bsink', type: 'bathroom-sink', category: 'bathroom', name: 'Stone Basin Sink', width: 0.7, depth: 0.5, height: 0.85, color: '#FFFFFF', icon: '🪞', price: 6_500_000, position: { x: 3.2, z: 6.2 }, rotation: Math.PI },
+        { id: 'g-bmirror', type: 'mirror', category: 'decor', name: 'LED Backlit Mirror', width: 0.7, depth: 0.05, height: 1.1, color: '#9CA3AF', icon: '🪞', price: 3_800_000, position: { x: 3.2, z: 6.8 }, rotation: Math.PI },
+        { id: 'g-shower', type: 'shower', category: 'bathroom', name: 'Glass Shower', width: 1.0, depth: 1.0, height: 2.1, color: '#E1F5FE', icon: '🚿', price: 10_000_000, position: { x: 5.0, z: 4.5 }, rotation: -Math.PI / 2 },
+        // Laundry / Storage
+        { id: 'g-dishwasher', type: 'dishwasher', category: 'kitchen', name: 'Washing Machine', width: 0.6, depth: 0.6, height: 0.85, color: '#E5E7EB', icon: '🍽️', price: 16_000_000, position: { x: 5.0, z: 2.0 }, rotation: -Math.PI / 2 },
+        { id: 'g-cabinet-laund', type: 'cabinet', category: 'storage', name: 'Utility Cabinet', width: 0.9, depth: 0.4, height: 1.6, color: '#5D4037', icon: '🗃️', price: 5_500_000, position: { x: 5.0, z: 3.0 }, rotation: -Math.PI / 2 },
+        // Front Yard Outdoor
+        { id: 'out-mailbox', type: 'mailbox', category: 'outdoor', name: 'Mailbox', width: 0.4, depth: 0.3, height: 1.1, color: '#1976D2', icon: '📬', price: 800_000, position: { x: 2.5, z: -11.5 }, rotation: 0 },
+        { id: 'out-step1', type: 'stepping-stone', category: 'outdoor', name: 'Stepping Stone', width: 0.6, depth: 0.6, height: 0.06, color: '#9E9E9E', icon: '⬜', price: 350_000, position: { x: 1.4, z: -8.6 }, rotation: 0 },
+        { id: 'out-step2', type: 'stepping-stone', category: 'outdoor', name: 'Stepping Stone', width: 0.6, depth: 0.6, height: 0.06, color: '#9E9E9E', icon: '⬜', price: 350_000, position: { x: 1.4, z: -9.8 }, rotation: 0 },
+        { id: 'out-step3', type: 'stepping-stone', category: 'outdoor', name: 'Stepping Stone', width: 0.6, depth: 0.6, height: 0.06, color: '#9E9E9E', icon: '⬜', price: 350_000, position: { x: 1.4, z: -11.0 }, rotation: 0 },
+        { id: 'out-tree-f1', type: 'tree', category: 'outdoor', name: 'Grand Oak Tree', width: 1.4, depth: 1.4, height: 3.8, color: '#2E7D32', icon: '🌳', price: 3_500_000, position: { x: -4.5, z: -10.0 }, rotation: 0 },
+        { id: 'out-pine-f1', type: 'pine-tree', category: 'outdoor', name: 'Accent Pine', width: 1.1, depth: 1.1, height: 4.5, color: '#1B5E20', icon: '🌲', price: 4_000_000, position: { x: 5.2, z: -10.0 }, rotation: 0 },
+        { id: 'out-hedge-f1', type: 'hedge', category: 'outdoor', name: 'Front Hedge', width: 2.0, depth: 0.5, height: 1.1, color: '#388E3C', icon: '🌳', price: 1_800_000, position: { x: -2.5, z: -11.5 }, rotation: 0 },
+        { id: 'out-hedge-f2', type: 'hedge', category: 'outdoor', name: 'Front Hedge', width: 2.0, depth: 0.5, height: 1.1, color: '#388E3C', icon: '🌳', price: 1_800_000, position: { x: 3.8, z: -11.5 }, rotation: 0 },
+        { id: 'out-lamp-f1', type: 'lamppost', category: 'outdoor', name: 'Garden Lamppost', width: 0.4, depth: 0.4, height: 3.2, color: '#263238', icon: '💡', price: 3_200_000, position: { x: -1.2, z: -9.5 }, rotation: 0 },
+        { id: 'out-flowerbed-f1', type: 'flowerbed', category: 'outdoor', name: 'Tropical Flower Bed', width: 1.6, depth: 0.6, height: 0.3, color: '#E91E63', icon: '🌷', price: 1_200_000, position: { x: -4.0, z: -8.0 }, rotation: 0 },
+        // Backyard Outdoor
+        { id: 'out-pool', type: 'pool', category: 'outdoor', name: 'Infinity Swimming Pool', width: 4.0, depth: 2.5, height: 0.1, color: '#03A9F4', icon: '🏊', price: 85_000_000, position: { x: -2.8, z: 9.8 }, rotation: 0 },
+        { id: 'out-bench1', type: 'garden-bench', category: 'outdoor', name: 'Poolside Lounge Bench', width: 1.5, depth: 0.5, height: 0.85, color: '#5D4037', icon: '🪑', price: 3_500_000, position: { x: -2.8, z: 7.8 }, rotation: 0 },
+        { id: 'out-bbq', type: 'bbq', category: 'outdoor', name: 'Luxury BBQ Station', width: 0.8, depth: 0.6, height: 1.1, color: '#37474F', icon: '🍖', price: 6_500_000, position: { x: 3.2, z: 8.0 }, rotation: Math.PI },
+        { id: 'out-picnic', type: 'picnic-table', category: 'outdoor', name: 'Teak Dining Table', width: 1.8, depth: 1.4, height: 0.75, color: '#A1887F', icon: '🪵', price: 7_500_000, position: { x: 3.2, z: 10.0 }, rotation: 0 },
+        { id: 'out-pond', type: 'pond', category: 'outdoor', name: 'Koi Pond', width: 2.2, depth: 1.5, height: 0.25, color: '#0277BD', icon: '💧', price: 15_000_000, position: { x: -2.8, z: 12.2 }, rotation: 0 },
+        { id: 'out-tree-b1', type: 'tree', category: 'outdoor', name: 'Shade Tree', width: 1.4, depth: 1.4, height: 3.8, color: '#2E7D32', icon: '🌳', price: 3_500_000, position: { x: -5.0, z: 12.0 }, rotation: 0 },
+        { id: 'out-tree-b2', type: 'tree', category: 'outdoor', name: 'Shade Tree', width: 1.4, depth: 1.4, height: 3.8, color: '#2E7D32', icon: '🌳', price: 3_500_000, position: { x: 5.2, z: 12.0 }, rotation: 0 },
+        { id: 'out-bush-b1', type: 'bush', category: 'outdoor', name: 'Tropical Bush', width: 0.8, depth: 0.8, height: 0.7, color: '#4CAF50', icon: '🌿', price: 800_000, position: { x: 0.5, z: 12.5 }, rotation: 0 },
+        { id: 'out-rose-b1', type: 'rose-bush', category: 'outdoor', name: 'Rose Bush', width: 0.6, depth: 0.6, height: 0.9, color: '#C2185B', icon: '🌹', price: 950_000, position: { x: 1.8, z: 12.5 }, rotation: 0 },
+        { id: 'out-lamp-b1', type: 'lamppost', category: 'outdoor', name: 'Terrace Lamppost', width: 0.4, depth: 0.4, height: 3.2, color: '#263238', icon: '💡', price: 3_200_000, position: { x: 1.0, z: 8.5 }, rotation: 0 },
+        { id: 'out-fence1', type: 'fence', category: 'outdoor', name: 'Perimeter Fence', width: 2.0, depth: 0.15, height: 1.2, color: '#8D6E63', icon: '🪵', price: 1_500_000, position: { x: -4.0, z: 13.5 }, rotation: 0 },
+        { id: 'out-fence2', type: 'fence', category: 'outdoor', name: 'Perimeter Fence', width: 2.0, depth: 0.15, height: 1.2, color: '#8D6E63', icon: '🪵', price: 1_500_000, position: { x: -2.0, z: 13.5 }, rotation: 0 },
+        { id: 'out-fence3', type: 'fence', category: 'outdoor', name: 'Perimeter Fence', width: 2.0, depth: 0.15, height: 1.2, color: '#8D6E63', icon: '🪵', price: 1_500_000, position: { x: 0.0, z: 13.5 }, rotation: 0 },
+        { id: 'out-fence4', type: 'fence', category: 'outdoor', name: 'Perimeter Fence', width: 2.0, depth: 0.15, height: 1.2, color: '#8D6E63', icon: '🪵', price: 1_500_000, position: { x: 2.0, z: 13.5 }, rotation: 0 },
+        { id: 'out-fence5', type: 'fence', category: 'outdoor', name: 'Perimeter Fence', width: 2.0, depth: 0.15, height: 1.2, color: '#8D6E63', icon: '🪵', price: 1_500_000, position: { x: 4.0, z: 13.5 }, rotation: 0 },
+      ],
+    },
+    {
+      id: 'first',
+      name: 'Tầng 2 — Master Suite, Phòng ngủ 02, Phòng ngủ 03, Sinh hoạt chung & Ban công',
+      floorColor: '#E8DED1',
+      floorPattern: 'wood',
+      interiorWalls: [
+        { id: 'w-f-m-e', x1: -0.6, z1: -6.8, x2: -0.6, z2: -0.8, thickness: 0.1 },
+        { id: 'w-f-b2-n', x1: -5.8, z1: 0.8, x2: -0.6, z2: 0.8, thickness: 0.1 },
+        { id: 'w-f-b2-e', x1: -0.6, z1: 0.8, x2: -0.6, z2: 6.8, thickness: 0.1 },
+        { id: 'w-f-b3-w', x1: 2.0, z1: -6.8, x2: 2.0, z2: -2.2, thickness: 0.1 },
+        { id: 'w-f-b3-s', x1: 2.0, z1: -2.2, x2: 5.8, z2: -2.2, thickness: 0.1 },
+        { id: 'w-f-bath-n', x1: 2.2, z1: 3.5, x2: 5.8, z2: 3.5, thickness: 0.1 },
+        { id: 'w-f-bath-w', x1: 2.2, z1: 3.5, x2: 2.2, z2: 6.8, thickness: 0.1 },
+      ],
+      items: [
+        // Exterior Doors & Openings
+        templateOpening('serenity-door-balcony', 'door', 'south', 0.5, { width: WIDTH, depth: DEPTH }),
+        // Interior Doors
+        { id: 'door-f-master', type: 'door', category: 'structure', name: 'Master Suite Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000, position: { x: -0.6, z: -2.0 }, rotation: -Math.PI / 2 },
+        { id: 'door-f-b2', type: 'door', category: 'structure', name: 'Bedroom 2 Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000, position: { x: -1.8, z: 0.8 }, rotation: 0 },
+        { id: 'door-f-b3', type: 'door', category: 'structure', name: 'Bedroom 3 Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000, position: { x: 3.2, z: -2.2 }, rotation: 0 },
+        { id: 'door-f-bath', type: 'door', category: 'structure', name: 'Shared Bathroom Door', width: 0.9, depth: 0.12, height: 2.05, color: '#6D4C41', icon: '🚪', price: 3_500_000, position: { x: 3.2, z: 3.5 }, rotation: 0 },
+        // Windows
+        templateOpening('win-f-n1', 'window', 'north', -3.5, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-f-n2', 'window', 'north', 3.8, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-f-w1', 'window', 'west', -3.8, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-f-w2', 'window', 'west', 3.8, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-f-s1', 'window', 'south', -3.5, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-f-e1', 'window', 'east', -4.5, { width: WIDTH, depth: DEPTH }),
+        templateOpening('win-f-e2', 'window', 'east', 5.0, { width: WIDTH, depth: DEPTH }),
+        // Stairs
+        { id: 'f-stairs', type: 'stairs', category: 'structure', name: 'Stairs', width: 1.2, depth: 2.4, height: 3.0, color: '#374151', icon: '🪜', price: 35_000_000, position: { x: 0.8, z: -0.5 }, rotation: 0 },
+        // Master Suite
+        { id: 'f-bed1', type: 'bed', category: 'bedroom', name: 'Master King Bed', width: 2.0, depth: 1.8, height: 0.65, color: '#F3F4F6', icon: '🛏️', price: 32_000_000, position: { x: -3.5, z: -4.8 }, rotation: 0 },
+        { id: 'f-night1', type: 'nightstand', category: 'bedroom', name: 'Nightstand', width: 0.5, depth: 0.4, height: 0.6, color: '#374151', icon: '🕯️', price: 3_200_000, position: { x: -5.0, z: -4.8 }, rotation: 0 },
+        { id: 'f-night2', type: 'nightstand', category: 'bedroom', name: 'Nightstand', width: 0.5, depth: 0.4, height: 0.6, color: '#374151', icon: '🕯️', price: 3_200_000, position: { x: -2.0, z: -4.8 }, rotation: 0 },
+        { id: 'f-lamp1', type: 'lamp', category: 'electronics', name: 'Bedside Lamp', width: 0.3, depth: 0.3, height: 0.5, color: '#FCD34D', icon: '💡', price: 2_200_000, position: { x: -5.0, z: -4.8 }, rotation: 0 },
+        { id: 'f-lamp2', type: 'lamp', category: 'electronics', name: 'Bedside Lamp', width: 0.3, depth: 0.3, height: 0.5, color: '#FCD34D', icon: '💡', price: 2_200_000, position: { x: -2.0, z: -4.8 }, rotation: 0 },
+        { id: 'f-rug1', type: 'rug', category: 'decor', name: 'Soft Bedroom Rug', width: 2.6, depth: 2.0, height: 0.02, color: '#6B7280', icon: '🟥', price: 5_500_000, position: { x: -3.5, z: -4.0 }, rotation: 0 },
+        { id: 'f-bathtub', type: 'bathtub', category: 'bathroom', name: 'Luxury Bathtub', width: 1.7, depth: 0.8, height: 0.6, color: '#FFFFFF', icon: '🛁', price: 24_000_000, position: { x: -4.8, z: -2.2 }, rotation: Math.PI / 2 },
+        { id: 'f-wardrobe1', type: 'wardrobe', category: 'bedroom', name: 'Master Wardrobe', width: 1.8, depth: 0.6, height: 2.2, color: '#1F2937', icon: '🚪', price: 22_000_000, position: { x: -2.4, z: -1.2 }, rotation: Math.PI },
+        // Bedroom 02
+        { id: 'f-bed2', type: 'bed', category: 'bedroom', name: 'Queen Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E5E7EB', icon: '🛏️', price: 20_000_000, position: { x: -3.5, z: 5.5 }, rotation: Math.PI },
+        { id: 'f-night3', type: 'nightstand', category: 'bedroom', name: 'Nightstand', width: 0.5, depth: 0.4, height: 0.6, color: '#374151', icon: '🕯️', price: 2_800_000, position: { x: -2.0, z: 5.5 }, rotation: Math.PI },
+        { id: 'f-lamp3', type: 'lamp', category: 'electronics', name: 'Desk Lamp', width: 0.3, depth: 0.3, height: 0.5, color: '#FCD34D', icon: '💡', price: 1_800_000, position: { x: -2.0, z: 5.5 }, rotation: 0 },
+        { id: 'f-wardrobe2', type: 'wardrobe', category: 'bedroom', name: 'Wardrobe', width: 1.5, depth: 0.6, height: 2.1, color: '#374151', icon: '🚪', price: 16_000_000, position: { x: -5.0, z: 2.5 }, rotation: Math.PI / 2 },
+        { id: 'f-desk2', type: 'desk', category: 'tables', name: 'Study Desk', width: 1.3, depth: 0.65, height: 0.75, color: '#1F2937', icon: '🖥️', price: 7_500_000, position: { x: -1.4, z: 3.5 }, rotation: -Math.PI / 2 },
+        { id: 'f-chair2', type: 'chair', category: 'seating', name: 'Study Chair', width: 0.5, depth: 0.5, height: 0.85, color: '#4B5563', icon: '🪑', price: 2_400_000, position: { x: -2.1, z: 3.5 }, rotation: Math.PI / 2 },
+        // Bedroom 03 / Studio
+        { id: 'f-bed3', type: 'bed', category: 'bedroom', name: 'Studio Bed', width: 2.0, depth: 1.6, height: 0.6, color: '#E8E8E8', icon: '🛏️', price: 16_000_000, position: { x: 4.2, z: -5.5 }, rotation: 0 },
+        { id: 'f-night4', type: 'nightstand', category: 'bedroom', name: 'Nightstand', width: 0.5, depth: 0.4, height: 0.6, color: '#374151', icon: '🕯️', price: 2_500_000, position: { x: 2.7, z: -5.5 }, rotation: 0 },
+        { id: 'f-lamp4', type: 'lamp', category: 'electronics', name: 'Bedside Lamp', width: 0.3, depth: 0.3, height: 0.5, color: '#FFD700', icon: '💡', price: 1_500_000, position: { x: 2.7, z: -5.5 }, rotation: 0 },
+        { id: 'f-wardrobe3', type: 'wardrobe', category: 'bedroom', name: 'Studio Wardrobe', width: 1.4, depth: 0.6, height: 2.1, color: '#374151', icon: '🚪', price: 14_000_000, position: { x: 5.2, z: -3.5 }, rotation: -Math.PI / 2 },
+        { id: 'f-desk3', type: 'desk', category: 'tables', name: 'Workstation Desk', width: 1.2, depth: 0.6, height: 0.75, color: '#1F2937', icon: '🖥️', price: 6_500_000, position: { x: 3.2, z: -3.2 }, rotation: Math.PI },
+        { id: 'f-computer', type: 'computer', category: 'electronics', name: 'Computer PC', width: 0.5, depth: 0.5, height: 0.5, color: '#37474F', icon: '🖥️', price: 25_000_000, position: { x: 3.2, z: -3.2 }, rotation: Math.PI },
+        { id: 'f-chair3', type: 'chair', category: 'seating', name: 'Ergonomic Chair', width: 0.5, depth: 0.5, height: 0.85, color: '#374151', icon: '🪑', price: 3_500_000, position: { x: 3.2, z: -3.9 }, rotation: 0 },
+        // Shared Bathroom
+        { id: 'f-shower', type: 'shower', category: 'bathroom', name: 'Walk-in Shower', width: 1.0, depth: 1.0, height: 2.1, color: '#E0F2FE', icon: '🚿', price: 15_000_000, position: { x: 5.0, z: 4.5 }, rotation: -Math.PI / 2 },
+        { id: 'f-toilet', type: 'toilet', category: 'bathroom', name: 'Smart Toilet', width: 0.4, depth: 0.7, height: 0.8, color: '#FFFFFF', icon: '🚽', price: 12_000_000, position: { x: 5.0, z: 6.2 }, rotation: Math.PI },
+        { id: 'f-sink', type: 'bathroom-sink', category: 'bathroom', name: 'Vanity Sink', width: 0.8, depth: 0.5, height: 0.85, color: '#FFFFFF', icon: '🪞', price: 7_500_000, position: { x: 3.2, z: 6.2 }, rotation: Math.PI },
+        { id: 'f-mirror', type: 'mirror', category: 'decor', name: 'Vanity Mirror', width: 0.8, depth: 0.05, height: 1.2, color: '#9CA3AF', icon: '🪞', price: 3_500_000, position: { x: 3.2, z: 6.8 }, rotation: Math.PI },
+        // Family Lounge
+        { id: 'f-lounge-sofa', type: 'sofa', category: 'seating', name: 'Lounge Sofa', width: 2.0, depth: 0.9, height: 0.8, color: '#4A5568', icon: '🛋️', price: 16_000_000, position: { x: 3.2, z: 1.5 }, rotation: Math.PI },
+        { id: 'f-lounge-coffee', type: 'coffee-table', category: 'tables', name: 'Coffee Table', width: 1.0, depth: 0.5, height: 0.4, color: '#CD853F', icon: '🟫', price: 3_500_000, position: { x: 3.2, z: 0.5 }, rotation: 0 },
+        { id: 'f-lounge-shelf', type: 'bookshelf', category: 'storage', name: 'Bookshelf', width: 1.0, depth: 0.3, height: 2.0, color: '#654321', icon: '📚', price: 4_500_000, position: { x: 5.3, z: 1.5 }, rotation: -Math.PI / 2 },
+        { id: 'f-lounge-plant', type: 'plant', category: 'decor', name: 'Indoor Palm', width: 0.4, depth: 0.4, height: 1.0, color: '#228B22', icon: '🪴', price: 1_200_000, position: { x: 1.2, z: 2.5 }, rotation: 0 },
+        // Balcony
+        { id: 'f-balcony-bench', type: 'garden-bench', category: 'seating', name: 'Balcony Teak Bench', width: 1.5, depth: 0.5, height: 0.85, color: '#5D4037', icon: '🪑', price: 3_500_000, position: { x: 0.5, z: 5.8 }, rotation: Math.PI },
+        { id: 'f-balcony-pot', type: 'flowerpot', category: 'decor', name: 'Balcony Flowerpot', width: 0.25, depth: 0.25, height: 0.35, color: '#FF7043', icon: '🌷', price: 450_000, position: { x: 1.8, z: 5.8 }, rotation: 0 },
+      ],
+    },
+  ],
+};

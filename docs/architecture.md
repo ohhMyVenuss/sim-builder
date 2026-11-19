@@ -122,6 +122,7 @@ components/
     │   ├── zones.ts                     Room zones: rect and polygon validation, clamping, re-fit to detected rooms (#719), per-zone stats (porch left out, #582)
     │   ├── view-options.ts              View-menu switches and the view each one needs (#341); view invariants (zone drawing is 2D only, #439)
     │   ├── plan-view-fit.ts             What the on-screen plan and minimap fit (room + outdoor items, far ones as edge markers) and where beside the desktop HUD (#381)
+    │   ├── the-serenity-house.ts        Full Modern Tropical Luxury 2-storey villa layout specification
     │   ├── editor-notices.ts            notify() status messages, with an optional action button such as Undo (#651), notifyRefused(), zone-name requests (#374)
     │   ├── confirm-dialog.ts            askConfirm(): the in-app question queue that replaces window.confirm (#649)
     │   ├── overlay-queue.ts             Small-screen overlay policy: compact queries, toast queue, stack placement

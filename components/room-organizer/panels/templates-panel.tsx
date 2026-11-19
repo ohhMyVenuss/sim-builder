@@ -22,6 +22,7 @@ const TEMPLATE_LABELS: Readonly<Record<RoomTemplateKey, string>> = {
   canHo2PN: 'Căn hộ 2 phòng ngủ (70 m²)',
   canHo3PN: 'Căn hộ 3 phòng ngủ (96 m²)',
   bietThuSanVuon: 'Biệt thự 3 tầng cao cấp (Hoàn chỉnh)',
+  theSerenityHouse: 'THE SERENITY HOUSE (Modern Tropical Luxury)',
 };
 
 const TEMPLATE_OPTIONS = (Object.keys(TEMPLATE_LABELS) as RoomTemplateKey[]).map((key) => ({

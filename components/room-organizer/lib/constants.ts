@@ -1,3 +1,4 @@
+import { THE_SERENITY_HOUSE } from './the-serenity-house';
 import type { CatalogItem, CategoryMeta, FloorLayout, RoofSpec, RoofStyle, RoomLayout } from './types';
 
 // Defined beside the error screens' light helpers (#584).
@@ -193,7 +194,8 @@ export type RoomTemplateKey =
   | 'nhaPho5x20'
   | 'canHo2PN'
   | 'canHo3PN'
-  | 'bietThuSanVuon';
+  | 'bietThuSanVuon'
+  | 'theSerenityHouse';
 
 function singleFloorTemplate(
   name: string,
@@ -225,7 +227,7 @@ function singleFloorTemplate(
  * Front-wall openings stay clear of the middle 1.4 m, where adding the
  * default porch cuts its recess (`DEFAULT_ENTRANCE`): |x| >= 0.7 + width/2.
  */
-function templateOpening(
+export function templateOpening(
   id: string,
   type: 'door' | 'window',
   wall: 'north' | 'south' | 'east' | 'west',
@@ -655,12 +657,13 @@ export const ROOM_TEMPLATES = {
           { id: 's-toilet', type: 'toilet', category: 'bathroom', name: 'Compact Toilet', width: 0.4, depth: 0.7, height: 0.8, color: '#FFFFFF', icon: '🚽', price: 9_500_000, position: { x: 5.0, z: 6.2 }, rotation: Math.PI },
           { id: 's-sink', type: 'bathroom-sink', category: 'bathroom', name: 'Utility Sink', width: 0.7, depth: 0.5, height: 0.85, color: '#FFFFFF', icon: '🪞', price: 5_500_000, position: { x: 3.2, z: 6.2 }, rotation: Math.PI },
           { id: 's-mirror', type: 'mirror', category: 'decor', name: 'Wall Mirror', width: 0.6, depth: 0.05, height: 1.0, color: '#9CA3AF', icon: '🪞', price: 2_500_000, position: { x: 3.2, z: 6.8 }, rotation: Math.PI },
-          { id: 's-bench', type: 'garden-bench', category: 'outdoor', name: 'Teak Garden Bench', width: 1.6, depth: 0.6, height: 0.85, color: '#4B5563', icon: '🪑', price: 6_500_000, position: { x: 1.5, z: -5.5 }, rotation: 0 },
-          { id: 's-picnic', type: 'picnic-table', category: 'outdoor', name: 'Outdoor Dining Table', width: 1.8, depth: 1.4, height: 0.75, color: '#6B7280', icon: '🪵', price: 9_800_000, position: { x: 3.5, z: -4.0 }, rotation: 0 },
+          { id: 's-bench', type: 'garden-bench', category: 'seating', name: 'Teak Garden Bench', width: 1.6, depth: 0.6, height: 0.85, color: '#4B5563', icon: '🪑', price: 6_500_000, position: { x: 1.5, z: -5.5 }, rotation: 0 },
+          { id: 's-picnic', type: 'picnic-table', category: 'tables', name: 'Outdoor Dining Table', width: 1.8, depth: 1.4, height: 0.75, color: '#6B7280', icon: '🪵', price: 9_800_000, position: { x: 3.5, z: -4.0 }, rotation: 0 },
           { id: 's-flower1', type: 'flowerpot', category: 'decor', name: 'Terrace Flowerpot', width: 0.35, depth: 0.35, height: 0.45, color: '#EA580C', icon: '🌷', price: 950_000, position: { x: 0.8, z: -6.2 }, rotation: 0 },
           { id: 's-flower2', type: 'flowerpot', category: 'decor', name: 'Terrace Flowerpot', width: 0.35, depth: 0.35, height: 0.45, color: '#EA580C', icon: '🌷', price: 950_000, position: { x: 5.2, z: -6.2 }, rotation: 0 },
         ],
       },
     ],
   },
+  theSerenityHouse: THE_SERENITY_HOUSE,
 } as const satisfies Record<RoomTemplateKey, Omit<RoomLayout, 'id'>>;
