@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeFloor, makeItem, makeLayout } from './__testfixtures__/fixtures';
+import { DEFAULT_BUDGET } from './constants';
 import { floorKeepOut } from './floor-keep-out';
 import { rotatedHalfExtents } from './footprint';
 import { hasCollisions, itemsOverlap } from './geometry';
@@ -116,7 +117,7 @@ describe('surpriseFloorItems keeps the structure and fits around it (#448)', () 
     const keepOut = floorKeepOut(layout, 0);
     expect(keepOut.length).toBeGreaterThan(0);
     for (let seed = 0; seed < 120; seed++) {
-      const items = surpriseFloorItems(layout, 0, 25_000, seed);
+      const items = surpriseFloorItems(layout, 0, DEFAULT_BUDGET, seed);
       const kept = items.filter(keptBySurprise);
       for (const piece of items.filter((item) => item.id.startsWith('surprise'))) {
         expect(hasCollisions(piece, kept, 8, 8, { keepOut, interiorWalls }), `seed ${seed}: ${piece.type}`).toBe(false);
@@ -129,7 +130,7 @@ describe('surpriseFloorItems keeps the structure and fits around it (#448)', () 
     const gap = entrancePlanOutline(layout, 0)!;
     let north = 0;
     for (let seed = 0; seed < 120; seed++) {
-      for (const art of surpriseFloorItems(layout, 0, 25_000, seed)) {
+      for (const art of surpriseFloorItems(layout, 0, DEFAULT_BUDGET, seed)) {
         if (art.type !== 'painting' && art.type !== 'mirror') continue;
         const { x, z } = art.position!;
         if (z > -3.5) continue;

@@ -35,7 +35,7 @@ function staticGraph(entry: string): Set<string> {
       if (target) queue.push(target);
     }
   }
-  return new Set([...seen].map((file) => relative(REPO, file)));
+  return new Set([...seen].map((file) => relative(REPO, file).replace(/\\/g, '/')));
 }
 
 describe('first-load JS (#584)', () => {

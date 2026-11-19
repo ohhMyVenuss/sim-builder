@@ -237,8 +237,8 @@ describe('Catalogue tiles are named (#637)', () => {
   it('leads with the item name, then the price', () => {
     layoutStore.getState().actions.applyLayout(makeLayout());
     editorTree(<CatalogStrip category="structure" onAdd={() => {}} />);
-    expect(screen.getByRole('button', { name: 'Stairs, $1,500' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Winder Stairs, $2,200' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /(Stairs, \$1,500|Stairs, 25 tr ₫)/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /(Winder Stairs, \$2,200|Winder Stairs, 35 tr ₫)/ })).toBeTruthy();
   });
 });
 

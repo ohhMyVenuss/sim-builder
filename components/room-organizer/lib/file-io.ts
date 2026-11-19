@@ -1,3 +1,4 @@
+import { type BoqCalcOptions, generateBoqCsv } from './boq';
 import { downloadBlob, downloadTextFile, exportFileName } from './plan-export/download';
 import { MAX_LAYOUT_JSON_BYTES, parseStoredLayout } from './schema';
 import { zoneContains } from './zones';
@@ -213,6 +214,10 @@ export function downloadInventoryCsv(layout: RoomLayout): void {
 
 export function downloadScheduleCsv(layout: RoomLayout): void {
   downloadTextFile(exportFileName(layout.name, 'csv', 'schedule'), 'text/csv;charset=utf-8', scheduleCsv(layout));
+}
+
+export function downloadBoqCsv(layout: RoomLayout, options?: BoqCalcOptions): void {
+  downloadTextFile(exportFileName(layout.name, 'csv', 'boq'), 'text/csv;charset=utf-8', generateBoqCsv(layout, options));
 }
 
 /**

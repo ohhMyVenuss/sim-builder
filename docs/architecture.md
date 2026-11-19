@@ -75,6 +75,7 @@ components/
     │   ├── blueprint.ts                 Print-friendly 2D blueprint HTML, canvas fitted to the plan content (#377)
     │   ├── blueprint-2d-to-3d.ts        2D technical drawing (DXF, SVG, raster image) parser and 3D wall reconstructor
     │   ├── catalog-drag.ts              HTML5 drag MIME + catalogue keys, tile blocked reasons
+    │   ├── boq.ts                       Bill of quantities (BOQ), material finishing cost calculations, tiers and CSV export
     │   ├── budget.ts                    Hard budget (#463e): spend, funds left, 80 % sell-back, purchase refusal, over-budget tile reason, schema repair
     │   ├── safe-storage.ts              localStorage get/set/remove that never throw (#396)
     │   ├── storage-errors.ts            Classifies a storage error: quota, blocked or unknown

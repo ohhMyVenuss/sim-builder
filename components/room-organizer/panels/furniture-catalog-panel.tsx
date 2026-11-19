@@ -64,8 +64,8 @@ export function FurnitureCatalogPanel({ onAdd }: FurnitureCatalogPanelProps): JS
           <span className="text-[10px] font-normal text-muted-foreground">{filtered.length} items</span>
         </CardTitle>
         <Input
-          aria-label="Search furniture"
-          placeholder="🔍 Search furniture…"
+          aria-label="Tìm kiếm nội thất"
+          placeholder="Tìm kiếm nội thất…"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           className="text-xs"

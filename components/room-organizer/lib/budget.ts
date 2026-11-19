@@ -3,6 +3,8 @@ import { formatVnd } from './format';
 import { ENTRANCE_DOOR_ID } from './street';
 import type { FurnitureItem, HardBudget, RoomLayout } from './types';
 
+export * from './boq';
+
 /*
  * Budget as a game (#463e). The hard budget is opt-in per house: with
  * `layout.budget` absent the budget only advises, as it always has. Once

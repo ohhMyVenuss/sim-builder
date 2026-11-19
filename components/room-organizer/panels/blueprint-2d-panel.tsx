@@ -1,18 +1,24 @@
 'use client';
 
+import { Building2, Check, Crop, FileUp, Ruler } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRoomEditor } from '../contexts';
-import { analyzeBlueprintFile, type Blueprint2DResult } from '../lib/blueprint-2d-to-3d';
+import {
+  analyzeBlueprintFile,
+  calibrateScale2D,
+  type Blueprint2DResult,
+  type CropROI,
+} from '../lib/blueprint-2d-to-3d';
 import { MAX_FLOORS } from '../lib/constants';
 import { notify } from '../lib/editor-notices';
 import { MAX_STOREY_HEIGHT, MIN_STOREY_HEIGHT } from '../lib/storeys';
 
 /**
- * Import a 2D technical drawing (DXF, SVG, PNG, JPG, WebP) and automatically
- * reconstruct the 3D house or active floor's footprint and interior walls.
+ * Import a 2D technical drawing (DXF, SVG, PDF, PNG, JPG, WebP) and automatically
+ * reconstruct the 3D house or active floor's footprint, interior walls, and openings.
  */
 export function Blueprint2DPanel(): JSX.Element {
   const { actions, history } = useRoomEditor();
@@ -33,13 +39,28 @@ export function Blueprint2DPanel(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Blueprint2DResult | null>(null);
 
-  const runAnalysis = async (file: File, widthValue: string) => {
+  // ROI Crop state
+  const [enableRoi, setEnableRoi] = useState<boolean>(false);
+  const [roiX, setRoiX] = useState<string>('0');
+  const [roiY, setRoiY] = useState<string>('0');
+  const [roiW, setRoiW] = useState<string>('100');
+  const [roiH, setRoiH] = useState<string>('100');
+
+  // 2-Point Calibration state
+  const [enableCalibration, setEnableCalibration] = useState<boolean>(false);
+  const [calibP1X, setCalibP1X] = useState<string>('0');
+  const [calibP1Y, setCalibP1Y] = useState<string>('0');
+  const [calibP2X, setCalibP2X] = useState<string>('784.4');
+  const [calibP2Y, setCalibP2Y] = useState<string>('0');
+  const [calibRealDist, setCalibRealDist] = useState<string>('7.844');
+
+  const runAnalysis = async (file: File, widthValue: string, roiOptions?: CropROI) => {
     setBusy(true);
     setError(null);
     try {
       const parsedW = Number.parseFloat(widthValue);
       const targetW = Number.isFinite(parsedW) && parsedW >= 2 ? parsedW : 10;
-      const result = await analyzeBlueprintFile(file, targetW);
+      const result = await analyzeBlueprintFile(file, targetW, roiOptions ? { roi: roiOptions } : undefined);
       setPreview(result);
     } catch (err) {
       setPreview(null);
@@ -54,7 +75,50 @@ export function Blueprint2DPanel(): JSX.Element {
     event.target.value = '';
     if (!file) return;
     setSelectedFile(file);
-    void runAnalysis(file, targetWidth);
+    const activeRoi = enableRoi
+      ? {
+          x: (Number.parseFloat(roiX) || 0) / 100,
+          y: (Number.parseFloat(roiY) || 0) / 100,
+          width: (Number.parseFloat(roiW) || 100) / 100,
+          height: (Number.parseFloat(roiH) || 100) / 100,
+        }
+      : undefined;
+    void runAnalysis(file, targetWidth, activeRoi);
+  };
+
+  const handleApplyRoi = () => {
+    if (!selectedFile) return;
+    const activeRoi: CropROI = {
+      x: (Number.parseFloat(roiX) || 0) / 100,
+      y: (Number.parseFloat(roiY) || 0) / 100,
+      width: (Number.parseFloat(roiW) || 100) / 100,
+      height: (Number.parseFloat(roiH) || 100) / 100,
+    };
+    void runAnalysis(selectedFile, targetWidth, activeRoi);
+    notify('Đã cập nhật vùng chọn mặt bằng (ROI Crop).');
+  };
+
+  const handleApplyCalibration = () => {
+    try {
+      const p1 = { x: Number.parseFloat(calibP1X) || 0, y: Number.parseFloat(calibP1Y) || 0 };
+      const p2 = { x: Number.parseFloat(calibP2X) || 0, y: Number.parseFloat(calibP2Y) || 0 };
+      const realDist = Number.parseFloat(calibRealDist) || 7.844;
+      const metersPerPixel = calibrateScale2D(p1, p2, realDist);
+      if (preview && preview.rawWidth > 0) {
+        const calculatedWidth = (preview.rawWidth * metersPerPixel).toFixed(2);
+        setTargetWidth(calculatedWidth);
+        if (selectedFile) void runAnalysis(selectedFile, calculatedWidth);
+        notify(`Hiệu chuẩn tỷ lệ 2 điểm thành công: quy đổi ${calculatedWidth} m.`);
+      } else {
+        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        const calcW = Math.max(2, Math.round(dist * metersPerPixel * 100) / 100);
+        setTargetWidth(String(calcW));
+        if (selectedFile) void runAnalysis(selectedFile, String(calcW));
+        notify(`Đã tính chiều rộng theo 2 điểm: ${calcW} m.`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Lỗi hiệu chuẩn 2 điểm.');
+    }
   };
 
   const handleApply = () => {
@@ -69,29 +133,34 @@ export function Blueprint2DPanel(): JSX.Element {
       width: preview.width,
       depth: preview.depth,
       interiorWalls: preview.interiorWalls,
+      ...(preview.openings ? { openings: preview.openings } : {}),
       mode,
       floorCount: floorsNum,
       storeyHeightMeters: storeyNum,
       floorPlanImage: keepUnderlay && preview.imageDataUrl ? preview.imageDataUrl : null,
     });
+    const openingMsg = preview.openings?.length ? `, ${preview.openings.length} cửa đi/cửa sổ` : '';
     notify(
-      `Đã dựng mô hình 3D (${preview.width} m × ${preview.depth} m, ${preview.interiorWalls.length} vách ngăn) từ bản vẽ 2D.`
+      `Đã dựng mô hình 3D (${preview.width} m × ${preview.depth} m, ${preview.interiorWalls.length} vách ngăn${openingMsg}) từ bản vẽ 2D.`
     );
   };
 
   return (
     <div className="pt-3 border-t space-y-2.5">
       <div>
-        <Label className="text-sm font-medium">Dựng nhà 3D từ bản vẽ kỹ thuật 2D</Label>
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          <Building2 className="w-4 h-4 text-primary" />
+          <span>Dựng nhà 3D từ bản vẽ kỹ thuật 2D</span>
+        </div>
         <p className="text-[11px] text-muted-foreground mt-0.5">
-          Hỗ trợ bản vẽ CAD (.dxf), vector (.svg) hoặc ảnh mặt bằng (.png, .jpg, .webp).
+          Hỗ trợ hồ sơ thiết kế PDF (.pdf), bản vẽ CAD (.dxf), vector (.svg) hoặc ảnh (.png, .jpg, .webp).
         </p>
       </div>
 
       <input
         ref={fileRef}
         type="file"
-        accept=".dxf,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
+        accept=".dxf,.svg,.pdf,image/png,image/jpeg,image/webp,image/svg+xml,application/pdf"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -100,12 +169,117 @@ export function Blueprint2DPanel(): JSX.Element {
         type="button"
         variant="default"
         size="sm"
-        className="w-full text-xs"
+        className="w-full text-xs flex items-center justify-center gap-1.5"
         disabled={busy}
         onClick={() => fileRef.current?.click()}
       >
-        {busy ? 'Đang phân tích bản vẽ…' : selectedFile ? `Đổi bản vẽ (${selectedFile.name})` : '📐 Chọn bản vẽ kỹ thuật 2D'}
+        <FileUp className="w-3.5 h-3.5" />
+        {busy ? 'Đang phân tích bản vẽ…' : selectedFile ? `Đổi bản vẽ (${selectedFile.name})` : 'Chọn bản vẽ kỹ thuật 2D'}
       </Button>
+
+      {/* Tùy chọn ROI Crop (Khoanh vùng mặt bằng chính) */}
+      <div className="rounded-md border p-2 space-y-1.5 bg-muted/20">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-1.5 text-[11px] font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enableRoi}
+              onChange={(e) => {
+                setEnableRoi(e.target.checked);
+                if (!e.target.checked && selectedFile) {
+                  void runAnalysis(selectedFile, targetWidth);
+                }
+              }}
+              className="rounded"
+            />
+            <Crop className="w-3 h-3 text-muted-foreground" />
+            <span>Khoanh vùng mặt bằng (ROI Crop)</span>
+          </label>
+        </div>
+
+        {enableRoi && (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-[10px] text-muted-foreground">
+              Loại bỏ khung tên, bảng ghi chú và đường gióng kích thước xung quanh ảnh:
+            </p>
+            <div className="grid grid-cols-4 gap-1 text-[10px]">
+              <div>
+                <span>X (%)</span>
+                <Input value={roiX} onChange={(e) => setRoiX(e.target.value)} className="h-6 text-[10px] px-1" />
+              </div>
+              <div>
+                <span>Y (%)</span>
+                <Input value={roiY} onChange={(e) => setRoiY(e.target.value)} className="h-6 text-[10px] px-1" />
+              </div>
+              <div>
+                <span>Rộng (%)</span>
+                <Input value={roiW} onChange={(e) => setRoiW(e.target.value)} className="h-6 text-[10px] px-1" />
+              </div>
+              <div>
+                <span>Cao (%)</span>
+                <Input value={roiH} onChange={(e) => setRoiH(e.target.value)} className="h-6 text-[10px] px-1" />
+              </div>
+            </div>
+            <Button type="button" variant="outline" size="sm" className="w-full h-6 text-[10px]" onClick={handleApplyRoi}>
+              Áp dụng vùng chọn
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Tùy chọn Hiệu chỉnh 2 điểm (2-Point Calibration) */}
+      <div className="rounded-md border p-2 space-y-1.5 bg-muted/20">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-1.5 text-[11px] font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enableCalibration}
+              onChange={(e) => setEnableCalibration(e.target.checked)}
+              className="rounded"
+            />
+            <Ruler className="w-3 h-3 text-muted-foreground" />
+            <span>Hiệu chỉnh tỷ lệ 2 điểm (Calibration)</span>
+          </label>
+        </div>
+
+        {enableCalibration && (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-[10px] text-muted-foreground">
+              Nhập tọa độ 2 điểm trên ảnh bản vẽ và chiều dài thực tế (mét) để tính tỷ lệ chính xác:
+            </p>
+            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+              <div>
+                <span>Điểm 1 (X, Y px)</span>
+                <div className="flex gap-1">
+                  <Input value={calibP1X} onChange={(e) => setCalibP1X(e.target.value)} placeholder="X" className="h-6 text-[10px] px-1" />
+                  <Input value={calibP1Y} onChange={(e) => setCalibP1Y(e.target.value)} placeholder="Y" className="h-6 text-[10px] px-1" />
+                </div>
+              </div>
+              <div>
+                <span>Điểm 2 (X, Y px)</span>
+                <div className="flex gap-1">
+                  <Input value={calibP2X} onChange={(e) => setCalibP2X(e.target.value)} placeholder="X" className="h-6 text-[10px] px-1" />
+                  <Input value={calibP2Y} onChange={(e) => setCalibP2Y(e.target.value)} placeholder="Y" className="h-6 text-[10px] px-1" />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <span>Khoảng cách thực:</span>
+              <Input
+                type="number"
+                step={0.001}
+                value={calibRealDist}
+                onChange={(e) => setCalibRealDist(e.target.value)}
+                className="h-6 text-[10px] w-20"
+              />
+              <span>mét</span>
+              <Button type="button" variant="outline" size="sm" className="h-6 text-[10px] ml-auto" onClick={handleApplyCalibration}>
+                Tính tỷ lệ
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -117,7 +291,7 @@ export function Blueprint2DPanel(): JSX.Element {
             type="number"
             min={2}
             max={40}
-            step={0.5}
+            step={0.1}
             value={targetWidth}
             onChange={(e) => setTargetWidth(e.target.value)}
             onBlur={() => {
@@ -186,7 +360,7 @@ export function Blueprint2DPanel(): JSX.Element {
             onChange={(e) => setKeepUnderlay(e.target.checked)}
             className="rounded"
           />
-          Giữ ảnh bản vẽ làm nền đối chiếu trên sàn
+          <span>Giữ ảnh bản vẽ làm nền đối chiếu trên sàn</span>
         </label>
       )}
 
@@ -198,13 +372,15 @@ export function Blueprint2DPanel(): JSX.Element {
             <span>
               Kích thước: <strong>{preview.width} m × {preview.depth} m</strong> ({(preview.width * preview.depth).toFixed(1)} m²)
             </span>
-            <span className="text-muted-foreground">{preview.interiorWalls.length} vách</span>
+            <span className="text-muted-foreground">
+              {preview.interiorWalls.length} vách{preview.openings?.length ? `, ${preview.openings.length} cửa` : ''}
+            </span>
           </div>
 
           <svg
             viewBox={`${-preview.width / 2 - 0.5} ${-preview.depth / 2 - 0.5} ${preview.width + 1} ${preview.depth + 1}`}
             className="w-full h-28 rounded border bg-slate-950/80"
-            aria-label="Xem trước cấu trúc tường 2D"
+            aria-label="Xem trước cấu trúc tường và cửa 2D"
           >
             <rect
               x={-preview.width / 2}
@@ -227,10 +403,22 @@ export function Blueprint2DPanel(): JSX.Element {
                 strokeLinecap="round"
               />
             ))}
+            {preview.openings?.map((op, idx) => (
+              <circle
+                key={`op-${idx}`}
+                cx={op.x}
+                cy={op.z}
+                r={op.width / 4}
+                fill={op.type === 'door' ? '#10b981' : '#06b6d4'}
+                stroke="#ffffff"
+                strokeWidth={0.05}
+              />
+            ))}
           </svg>
 
-          <Button type="button" size="sm" className="w-full text-xs" onClick={handleApply}>
-            🏗️ Dựng mô hình 3D ngay
+          <Button type="button" size="sm" className="w-full text-xs flex items-center justify-center gap-1.5" onClick={handleApply}>
+            <Check className="w-3.5 h-3.5" />
+            <span>Dựng mô hình 3D ngay</span>
           </Button>
         </div>
       )}
