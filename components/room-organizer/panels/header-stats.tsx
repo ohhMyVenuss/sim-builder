@@ -5,6 +5,7 @@ import { useLayout } from '../hooks/use-layout-store';
 import { useMediaQuery } from '../hooks/use-media-query';
 import { budgetLimit, budgetSpent } from '../lib/budget';
 import { formatAge, formatSize, formatVnd } from '../lib/format';
+import { setLocale, UI_TEXT, useLocale } from '../lib/i18n';
 import { HEADER_HIDDEN_QUERY } from '../lib/overlay-queue';
 import { ENTRANCE_DOOR_ID } from '../lib/street';
 import { Icon, type PlotcraftIconName } from '../plotcraft/icon';
@@ -32,6 +33,8 @@ export function HeaderStats({
 }: HeaderStatsProps): JSX.Element {
   // `layout` from the store selector — re-renders only on layout changes.
   const layout = useLayout();
+  const locale = useLocale();
+  const copy = UI_TEXT[locale].header;
   const budget = budgetLimit(layout);
   // The porch door is structure, not furniture: older saves still carry its
   // catalog price (#382).
@@ -43,15 +46,23 @@ export function HeaderStats({
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-      <Chip icon="box" label="Items" value={allItems.length.toString()} />
-      <Chip icon="stairs" label="Floors" value={layout.floors.length.toString()} />
-      <Chip icon="ruler" label="Room" value={formatSize(layout.width, layout.height)} />
+      <Chip icon="box" label={copy.items} value={allItems.length.toString()} />
+      <Chip icon="stairs" label={copy.floors} value={layout.floors.length.toString()} />
+      <Chip icon="ruler" label={copy.room} value={formatSize(layout.width, layout.height)} />
       <Chip
         icon="coin"
-        label="Chi phí"
+        label={copy.cost}
         value={`${formatVnd(cost, true)} / ${formatVnd(budget, true)}`}
         intent={overBudget ? 'danger' : ratio > 0.85 ? 'warning' : 'normal'}
       />
+      <button
+        type="button"
+        onClick={() => setLocale(locale === 'vi' ? 'en' : 'vi')}
+        title={locale === 'vi' ? 'Chuyển sang tiếng Anh' : 'Switch to Vietnamese'}
+        className="pc-glass pc-glass--dark px-2 py-1 rounded-full text-[11px] font-semibold text-amber-300 hover:text-white transition-colors"
+      >
+        {locale.toUpperCase()}
+      </button>
       <SaveIndicator lastSavedAt={lastSavedAt} saving={saving} saveError={saveError} />
       {remoteChange && (
         <RemoteChangeNotice onAdopt={onAdoptRemote} onDismiss={onDismissRemote} />

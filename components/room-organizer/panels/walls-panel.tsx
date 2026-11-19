@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useRoomEditor } from '../contexts';
+import { Icon } from '../plotcraft/icon';
 import { FLOOR_PATTERN_LABELS } from '../three/floor-patterns';
 import { WALL_PATTERN_LABELS } from '../three/wall-patterns';
 import type { FloorPattern, WallId, WallPattern } from '../lib/types';
@@ -29,7 +30,10 @@ export function WallsPanel(): JSX.Element {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">🎨 Walls &amp; Floor</CardTitle>
+        <CardTitle className="text-base flex items-center gap-1.5">
+          <Icon name="brick" size={16} />
+          Tường &amp; Sàn
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div>

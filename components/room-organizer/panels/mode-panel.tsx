@@ -6,6 +6,7 @@ import { useEdgeVar } from '../hooks/use-edge-var';
 import { NOT_WHILE_EXPLORING, useExploring } from '../hooks/use-exploring';
 import { useBudgetRemaining, useLayoutActions } from '../hooks/use-layout-store';
 import { CURRENCY_SYMBOL } from '../lib/constants';
+import { UI_TEXT, useLocale } from '../lib/i18n';
 import { ENTRANCE_DOOR_ID } from '../lib/street';
 import { Icon, type PlotcraftIconName } from '../plotcraft/icon';
 import { ViewOptionsMenu } from './view-options';
@@ -35,6 +36,9 @@ const MODES: ReadonlyArray<{
 
 export function ModePanel({ onSetMode, onSurprise }: ModePanelProps): JSX.Element {
   const { layout, history } = useRoomEditor();
+  const locale = useLocale();
+  const modeCopy = UI_TEXT[locale].modes;
+  const localizedModes = MODES.map((m) => ({ ...m, ...modeCopy[m.key] }));
   const view = useViewSettings('showCameraVision', 'showMinimap', 'showNpcs', 'snapToGrid', 'soundsEnabled', 'view2D');
   const { setAutoCycleLighting, toggle } = useEditorViewActions();
   const gameMode = useEditorView((state) => state.gameMode);
@@ -134,7 +138,7 @@ export function ModePanel({ onSetMode, onSurprise }: ModePanelProps): JSX.Elemen
         aria-label="Game mode"
         style={{ alignSelf: 'stretch', justifyContent: 'space-between' }}
       >
-        {MODES.map((entry) => {
+        {localizedModes.map((entry) => {
           const isActive = gameMode === entry.key;
           return (
             <button

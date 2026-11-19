@@ -24,7 +24,7 @@ describe('SidebarTabs (#434)', () => {
     render(<Harness onChange={vi.fn()} />);
     expect(screen.getByRole('tablist')).toBeTruthy();
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Build', 'Buy', 'Style', 'Manage']);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Xây dựng', 'Nội thất', 'Phong cách', 'Quản lý']);
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false']);
     expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1]);
     for (const tab of tabs) expect(tab.getAttribute('aria-controls')).toBe(SIDE_TABPANEL_ID);
@@ -35,20 +35,20 @@ describe('SidebarTabs (#434)', () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
     const tab = (name: string) => screen.getByRole('tab', { name });
-    tab('Build').focus();
-    fireEvent.keyDown(tab('Build'), { key: 'ArrowRight' });
+    tab('Xây dựng').focus();
+    fireEvent.keyDown(tab('Xây dựng'), { key: 'ArrowRight' });
     expect(onChange).toHaveBeenLastCalledWith('buy');
-    expect(document.activeElement).toBe(tab('Buy'));
-    expect(tab('Buy').getAttribute('aria-selected')).toBe('true');
-    fireEvent.keyDown(tab('Buy'), { key: 'End' });
-    expect(document.activeElement).toBe(tab('Manage'));
-    fireEvent.keyDown(tab('Manage'), { key: 'ArrowRight' });
-    expect(document.activeElement).toBe(tab('Build'));
-    fireEvent.keyDown(tab('Build'), { key: 'ArrowLeft' });
-    expect(document.activeElement).toBe(tab('Manage'));
-    fireEvent.keyDown(tab('Manage'), { key: 'Home' });
+    expect(document.activeElement).toBe(tab('Nội thất'));
+    expect(tab('Nội thất').getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(tab('Nội thất'), { key: 'End' });
+    expect(document.activeElement).toBe(tab('Quản lý'));
+    fireEvent.keyDown(tab('Quản lý'), { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(tab('Xây dựng'));
+    fireEvent.keyDown(tab('Xây dựng'), { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(tab('Quản lý'));
+    fireEvent.keyDown(tab('Quản lý'), { key: 'Home' });
     expect(onChange).toHaveBeenLastCalledWith('build');
-    expect(document.activeElement).toBe(tab('Build'));
+    expect(document.activeElement).toBe(tab('Xây dựng'));
   });
 
   it('keeps arrow keys from the editor shortcuts, and leaves other keys alone', () => {
@@ -56,10 +56,10 @@ describe('SidebarTabs (#434)', () => {
     window.addEventListener('keydown', onWindowKey);
     try {
       render(<Harness onChange={vi.fn()} />);
-      const build = screen.getByRole('tab', { name: 'Build' });
+      const build = screen.getByRole('tab', { name: 'Xây dựng' });
       fireEvent.keyDown(build, { key: 'ArrowRight' });
       expect(onWindowKey).not.toHaveBeenCalled();
-      fireEvent.keyDown(screen.getByRole('tab', { name: 'Buy' }), { key: 'z' });
+      fireEvent.keyDown(screen.getByRole('tab', { name: 'Nội thất' }), { key: 'z' });
       expect(onWindowKey).toHaveBeenCalledTimes(1);
     } finally {
       window.removeEventListener('keydown', onWindowKey);
@@ -69,7 +69,7 @@ describe('SidebarTabs (#434)', () => {
   it('leaves modified arrows (Alt+Left is Back) to the browser', () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
-    const build = screen.getByRole('tab', { name: 'Build' });
+    const build = screen.getByRole('tab', { name: 'Xây dựng' });
     fireEvent.keyDown(build, { key: 'ArrowLeft', altKey: true });
     fireEvent.keyDown(build, { key: 'ArrowRight', metaKey: true });
     expect(onChange).not.toHaveBeenCalled();

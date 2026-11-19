@@ -10,13 +10,13 @@ import { subscribeHouseReplaced } from '../lib/restore-point';
 // A Record, not a list, so a template added to ROOM_TEMPLATES without a label
 // here fails the typecheck instead of silently missing from the select (#343).
 const TEMPLATE_LABELS: Readonly<Record<RoomTemplateKey, string>> = {
-  bedroom: '🛏️ Bedroom',
-  livingRoom: '🛋️ Living Room',
-  office: '💼 Home Office',
-  kitchen: '🍳 Kitchen',
-  bathroom: '🛁 Bathroom',
-  studio: '🏠 Studio Apartment',
-  twoStory: '🏡 Two-Story Home',
+  bedroom: 'Phòng ngủ',
+  livingRoom: 'Phòng khách',
+  office: 'Phòng làm việc',
+  kitchen: 'Phòng bếp',
+  bathroom: 'Phòng tắm',
+  studio: 'Căn hộ Studio',
+  twoStory: 'Nhà 2 tầng',
 };
 
 const TEMPLATE_OPTIONS = (Object.keys(TEMPLATE_LABELS) as RoomTemplateKey[]).map((key) => ({
