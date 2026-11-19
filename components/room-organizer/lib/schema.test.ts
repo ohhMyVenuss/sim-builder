@@ -608,7 +608,7 @@ describe('persisted-field whitelist and bounds (#350)', () => {
           {
             ...makeFloor({
               items: [{ ...makeItem({ id: 'a' }), extra: 1, position: { x: 1, z: 2, y: 9 } } as never],
-              interiorWalls: [{ id: 'w', x1: 0, z1: 0, x2: 1, z2: 0, thickness: 3 } as never],
+              interiorWalls: [{ id: 'w', x1: 0, z1: 0, x2: 1, z2: 0, unknownWallProp: 3 } as never],
               zones: [{ id: 'z', name: 'Kitchen', color: '#abcdef', x: 0, z: 0, w: 2, d: 2, area: 4 } as never],
             }),
             note: 'x',
@@ -630,7 +630,7 @@ describe('persisted-field whitelist and bounds (#350)', () => {
     expect(floor).not.toHaveProperty('note');
     expect(floor.items[0]).not.toHaveProperty('extra');
     expect(floor.items[0]!.position).toEqual({ x: 1, z: 2 });
-    expect(floor.interiorWalls![0]).not.toHaveProperty('thickness');
+    expect(floor.interiorWalls![0]).not.toHaveProperty('unknownWallProp');
     expect(floor.zones![0]).not.toHaveProperty('area');
     expect(parsed!.roof).not.toHaveProperty('pitch');
     expect(parsed!.roof!.dormers![0]).not.toHaveProperty('tint');

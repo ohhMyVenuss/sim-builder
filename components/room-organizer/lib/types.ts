@@ -218,6 +218,8 @@ export interface InteriorWall {
   z1: number;
   x2: number;
   z2: number;
+  /** Wall thickness in metres (e.g. 0.1 for 100 mm partition, 0.2 for 200 mm structural). */
+  thickness?: number;
   color?: string;
   /** The second face, when it differs from `color` (#720); see lib/wall-sides.ts. */
   colorB?: string;
@@ -364,6 +366,8 @@ export interface RoomLayout {
   entrance?: EntranceSpec;
   /** A corner taken out of the footprint; see lib/footprint.ts. `width` and `height` stay the full rectangle. */
   cutout?: FootprintCutout;
+  /** Optional custom polygon footprint (e.g. tapered lot or apartment with loggia). */
+  footprintOutline?: Vec2[];
   /** 'pavement': the pavement runs right up to the front wall, no front garden. */
   frontage?: Frontage;
   /** The opt-in hard budget (#463e); absent, the budget only advises. */

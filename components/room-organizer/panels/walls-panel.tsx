@@ -79,6 +79,28 @@ export function WallsPanel(): JSX.Element {
             </div>
           ))}
         </div>
+
+        {(activeFloor.interiorWalls?.length ?? 0) > 0 && (
+          <div className="pt-2 border-t space-y-1.5">
+            <Label className="text-xs font-medium">Độ dày vách ngăn (100 mm / 200 mm)</Label>
+            <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+              {activeFloor.interiorWalls!.map((wall, idx) => (
+                <div key={wall.id} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-muted-foreground truncate">Vách #{idx + 1}</span>
+                  <select
+                    aria-label={`Độ dày vách ${idx + 1}`}
+                    value={wall.thickness ?? 0.1}
+                    onChange={(e) => actions.setInteriorWallThickness(wall.id, Number.parseFloat(e.target.value))}
+                    className="h-6 rounded border bg-background px-1.5 text-[11px]"
+                  >
+                    <option value={0.1}>100 mm (Vách ngăn)</option>
+                    <option value={0.2}>200 mm (Chịu lực)</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

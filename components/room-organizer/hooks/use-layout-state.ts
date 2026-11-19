@@ -61,6 +61,10 @@ export interface LayoutActions {
   setRoofStyle(style: RoofStyle): void;
   /** Cut a corner out of the building, or fill it back in (#727). */
   setCutout(cutout: FootprintCutout | null): void;
+  /** Set a custom polygon footprint (or null to revert to rectangle). */
+  setFootprintOutline(outline: ReadonlyArray<{ x: number; z: number }> | null): void;
+  /** Set an interior wall's thickness in metres (e.g. 0.1 for 100 mm, 0.2 for 200 mm). */
+  setInteriorWallThickness(id: string, thickness: number): void;
   setRoofColor(color: string): void;
   /** Roof dormers (#203). `addDormer` returns the new dormer's id. */
   addDormer(dormer: Omit<DormerInput, 'id'>): string;

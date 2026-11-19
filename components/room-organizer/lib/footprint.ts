@@ -72,6 +72,66 @@ export function clampToFootprint(
 /** What the shape of the building depends on. `height` is the depth, as on `RoomLayout`. */
 export interface FootprintBuilding extends Pick<RoomLayout, 'width' | 'height'> {
   cutout?: FootprintCutout | null | undefined;
+  footprintOutline?: readonly Vec2[] | undefined;
+}
+
+/** Area of a simple polygon by the shoelace formula (m²). */
+export function polygonArea(poly: readonly Vec2[]): number {
+  if (poly.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i]!;
+    const b = poly[(i + 1) % poly.length]!;
+    sum += a.x * b.z - b.x * a.z;
+  }
+  return Math.abs(sum) / 2;
+}
+
+function pointOnSegment(px: number, pz: number, a: Vec2, b: Vec2, eps = 1e-6): boolean {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const lenSq = dx * dx + dz * dz;
+  if (lenSq < eps * eps) return Math.hypot(px - a.x, pz - a.z) <= eps;
+  const t = Math.max(0, Math.min(1, ((px - a.x) * dx + (pz - a.z) * dz) / lenSq));
+  return Math.hypot(px - (a.x + t * dx), pz - (a.z + t * dz)) <= eps;
+}
+
+/** Even-odd ray-casting point-in-polygon check (edges count as inside). */
+export function pointInPolygon(poly: readonly Vec2[], x: number, z: number): boolean {
+  if (poly.length < 3) return false;
+  let inside = false;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i]!;
+    const b = poly[(i + 1) % poly.length]!;
+    if (pointOnSegment(x, z, a, b)) return true;
+    if ((a.z > z) !== (b.z > z) && x < a.x + ((z - a.z) / (b.z - a.z)) * (b.x - a.x)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/** Nearest point on the polygon boundary (or the point itself if already inside). */
+export function clampToPolygon(poly: readonly Vec2[], point: Vec2): Vec2 {
+  if (poly.length < 3 || pointInPolygon(poly, point.x, point.z)) return point;
+  let best = point;
+  let bestDistSq = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i]!;
+    const b = poly[(i + 1) % poly.length]!;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const lenSq = dx * dx + dz * dz;
+    const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.z - a.z) * dz) / lenSq));
+    const cx = a.x + t * dx;
+    const cz = a.z + t * dz;
+    const distSq = (point.x - cx) ** 2 + (point.z - cz) ** 2;
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
+      best = { x: cx, z: cz };
+    }
+  }
+  return best;
 }
 
 /** World rectangle, x0 < x1 and z0 < z1. */
@@ -131,6 +191,17 @@ export function cutoutRect({ width, height, cutout }: FootprintBuilding): Footpr
  * rectangle grows, which is exactly an outward offset of its two walls.
  */
 export function footprintOutline(building: FootprintBuilding, grow = 0): Vec2[] {
+  if (building.footprintOutline && building.footprintOutline.length >= 3) {
+    if (grow === 0) return building.footprintOutline.map((p) => ({ x: p.x, z: p.z }));
+    const cx = building.footprintOutline.reduce((s, p) => s + p.x, 0) / building.footprintOutline.length;
+    const cz = building.footprintOutline.reduce((s, p) => s + p.z, 0) / building.footprintOutline.length;
+    return building.footprintOutline.map((p) => {
+      const dx = p.x - cx;
+      const dz = p.z - cz;
+      const len = Math.hypot(dx, dz) || 1;
+      return { x: p.x + (dx / len) * grow, z: p.z + (dz / len) * grow };
+    });
+  }
   const hw = building.width / 2 + grow;
   const hd = building.height / 2 + grow;
   const corners: Record<FootprintCorner, Vec2> = {
@@ -173,15 +244,21 @@ export function onFootprintEdge(building: FootprintBuilding, x: number, z: numbe
   return false;
 }
 
-/** Whether a world point stands on the building: within the rectangle, not in the cut (edges count as on it). */
+/** Whether a world point stands on the building: within the rectangle/polygon, not in the cut (edges count as on it). */
 export function isInsideBuilding(building: FootprintBuilding, x: number, z: number): boolean {
+  if (building.footprintOutline && building.footprintOutline.length >= 3) {
+    return pointInPolygon(building.footprintOutline, x, z);
+  }
   if (Math.abs(x) > building.width / 2 || Math.abs(z) > building.height / 2) return false;
   const notch = cutoutRect(building);
   return !(notch && x > notch.x0 && x < notch.x1 && z > notch.z0 && z < notch.z1);
 }
 
-/** The nearest point standing on the building: inside the rectangle, and out of the cut by the shorter way. */
+/** The nearest point standing on the building: inside the rectangle/polygon, and out of the cut by the shorter way. */
 export function clampToBuilding(building: FootprintBuilding, point: Vec2): Vec2 {
+  if (building.footprintOutline && building.footprintOutline.length >= 3) {
+    return clampToPolygon(building.footprintOutline, point);
+  }
   const hw = building.width / 2;
   const hd = building.height / 2;
   const clamped = { x: Math.max(-hw, Math.min(hw, point.x)), z: Math.max(-hd, Math.min(hd, point.z)) };
@@ -227,6 +304,9 @@ export function trimRectToCutout<R extends { x: number; z: number; w: number; d:
 
 /** The building's floor area in m², before any porch. */
 export function buildingArea(building: FootprintBuilding): number {
+  if (building.footprintOutline && building.footprintOutline.length >= 3) {
+    return polygonArea(building.footprintOutline);
+  }
   const area = building.width * building.height;
   return building.cutout ? area - building.cutout.width * building.cutout.depth : area;
 }
