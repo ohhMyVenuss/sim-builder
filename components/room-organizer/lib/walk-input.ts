@@ -56,6 +56,14 @@ export function interacts(event: KeyChord & { repeat: boolean }): boolean {
 }
 
 /**
+ * Whether a keydown is the walker's lie-down key: `F` lies down on a bed or stands up.
+ */
+export function interactsLie(event: KeyChord & { repeat: boolean }): boolean {
+  if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return false;
+  return event.code === 'KeyF';
+}
+
+/**
  * Whether a keydown or keyup must drop every held key. macOS never sends the
  * keyup of any key released while Cmd is down, so W held before a Cmd+Z and
  * let go during it would march the walker on. Dropping on both Cmd edges

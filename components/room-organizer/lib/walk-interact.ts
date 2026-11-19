@@ -176,3 +176,28 @@ export function seatPose(
   }
   return { x, z, eyeY, lookX: x + forwardX * 3, lookY: eyeY, lookZ: z + forwardZ * 3 };
 }
+
+/**
+ * Where a walker lies down on `bed` on a storey whose floor is at `floorY`.
+ * The head rests on the pillow end (-z in bed local space), body aligned with the bed,
+ * looking towards the foot of the bed (+z) and angled slightly upward.
+ */
+export function bedLiePose(bed: FurnitureItem, floorY: number): SeatPose | null {
+  if (!bed.position || bed.type !== 'bed') return null;
+  const rotation = bed.rotation ?? 0;
+  const sin = Math.sin(rotation);
+  const cos = Math.cos(rotation);
+  // Head rests on the pillows near local -z (pillows are at -bed.depth * 0.32):
+  const headOffsetZ = -bed.depth * 0.28;
+  const x = bed.position.x + headOffsetZ * sin;
+  const z = bed.position.z + headOffsetZ * cos;
+  // Eye height lying on pillow:
+  const eyeY = floorY + bed.height * 0.7;
+
+  const lookDistance = 3.0;
+  const lookX = x + sin * lookDistance;
+  const lookZ = z + cos * lookDistance;
+  const lookY = eyeY + 0.6;
+
+  return { x, z, eyeY, lookX, lookY, lookZ };
+}

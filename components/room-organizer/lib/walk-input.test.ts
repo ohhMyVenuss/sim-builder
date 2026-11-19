@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WALK_MAX_FRAME_SECONDS, interacts, isTypingTarget, releasesHeldKeys, startsWalking, walkFrameSeconds } from './walk-input';
+import { WALK_MAX_FRAME_SECONDS, interacts, interactsLie, isTypingTarget, releasesHeldKeys, startsWalking, walkFrameSeconds } from './walk-input';
 
 const key = (code: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; altKey: boolean }> = {}) => ({
   code,
@@ -82,6 +82,19 @@ describe('interacts (#463b)', () => {
     expect(interacts({ ...key('KeyE', { ctrlKey: true }), repeat: false })).toBe(false);
     expect(interacts({ ...key('KeyE', { metaKey: true }), repeat: false })).toBe(false);
     expect(interacts({ ...key('KeyW'), repeat: false })).toBe(false);
+  });
+});
+
+describe('interactsLie', () => {
+  it('takes a fresh press of F', () => {
+    expect(interactsLie({ ...key('KeyF'), repeat: false })).toBe(true);
+  });
+
+  it('ignores the auto-repeat of a held F, chords and other keys', () => {
+    expect(interactsLie({ ...key('KeyF'), repeat: true })).toBe(false);
+    expect(interactsLie({ ...key('KeyF', { ctrlKey: true }), repeat: false })).toBe(false);
+    expect(interactsLie({ ...key('KeyF', { metaKey: true }), repeat: false })).toBe(false);
+    expect(interactsLie({ ...key('KeyE'), repeat: false })).toBe(false);
   });
 });
 

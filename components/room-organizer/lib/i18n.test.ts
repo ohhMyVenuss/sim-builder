@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { iconForItem } from '../plotcraft/icon';
 import { CATEGORIES, FURNITURE_CATALOG } from './constants';
 import { categoryLabel, getLocale, setLocale, UI_TEXT } from './i18n';
-import { iconForItem } from '../plotcraft/icon';
 
 describe('Task 4 — Vietnamese i18n & PlotCraft SVG icon coverage', () => {
   it('defaults to Vietnamese and switches cleanly between vi and en', () => {

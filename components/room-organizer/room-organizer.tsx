@@ -1673,11 +1673,14 @@ export function RoomOrganizer(): JSX.Element {
                 locked: walk.locked,
                 lockRefused: walk.lockRefused,
                 seatName: walk.seatName,
+                isBed: walk.isBed,
                 seated: walk.seated,
+                lying: walk.lying,
                 floorName: activeFloor.name,
                 multiFloor: layout.floors.length > 1,
                 onStick: walk.setStick,
                 onToggleSit: walk.toggleSit,
+                onToggleLie: walk.toggleLie,
                 onExit: exitWalkthrough,
               }
             : null

@@ -9,8 +9,8 @@ import {
   type WalkCollider,
   type WalkerState,
 } from '../lib/walk-collision';
-import { interacts, isTypingTarget, releasesHeldKeys, startsWalking, walkFrameSeconds } from '../lib/walk-input';
-import { findSeat, seatPose } from '../lib/walk-interact';
+import { interacts, interactsLie, isTypingTarget, releasesHeldKeys, startsWalking, walkFrameSeconds } from '../lib/walk-input';
+import { bedLiePose, findSeat, seatPose } from '../lib/walk-interact';
 import { walkArrival, walkSpawn, type WalkPose } from '../lib/walk-spawn';
 import {
   buildWalkWorld,
@@ -71,7 +71,10 @@ export interface UseWalkthroughResult {
   locked: boolean;
   /** The seat in reach, by name, while standing; null when none (#463b). */
   seatName: string | null;
+  /** Whether the seat in reach is a bed. */
+  isBed: boolean;
   seated: boolean;
+  lying: boolean;
   /** The walker is out on the lot (or in the porch): the whole house is drawn (#446). */
   outside: boolean;
   /**
@@ -85,6 +88,8 @@ export interface UseWalkthroughResult {
   setStick(x: number, y: number): void;
   /** Sit on the seat in reach, or stand up (`E`, or the HUD's button on touch). */
   toggleSit(): void;
+  /** Lie down on the bed in reach, or stand up (`F`, or the HUD's button on touch). */
+  toggleLie(): void;
 }
 
 /** Shoulder-width walker: wide enough that the camera's near plane never pokes
@@ -113,8 +118,9 @@ interface WalkSession {
   stickY: number;
   /** Walking by touch: no pointer lock, the stick and drags drive the walker. */
   touch: boolean;
-  /** Where the walker stood before sitting, or null while standing. */
+  /** Where the walker stood before sitting or lying down, or null while standing. */
   seated: { x: number; z: number } | null;
+  posture: 'standing' | 'seated' | 'lying';
   seatTargetId: string | null;
   outside: boolean;
   nearStairs: boolean;
@@ -159,7 +165,9 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
   const [lockRefused, setLockRefused] = useState(false);
   const [locked, setLocked] = useState(false);
   const [seatName, setSeatName] = useState<string | null>(null);
+  const [isBed, setIsBed] = useState(false);
   const [seated, setSeated] = useState(false);
+  const [lying, setLying] = useState(false);
   const [outside, setOutside] = useState(false);
   const [nearStairs, setNearStairs] = useState(false);
   const [lampStorey, setLampStorey] = useState(activeFloorIndex);
@@ -204,6 +212,7 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
     stickY: 0,
     touch: false,
     seated: null,
+    posture: 'standing',
     seatTargetId: null,
     outside: false,
     nearStairs: false,
@@ -212,6 +221,7 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
   });
   // Set by the init effect while the mode runs; the HUD's buttons call them.
   const toggleSitRef = useRef<(() => void) | null>(null);
+  const toggleLieRef = useRef<(() => void) | null>(null);
   const arriveRef = useRef<((floorIndex: number) => void) | null>(null);
 
   useEffect(() => {
@@ -339,7 +349,12 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
     arriveRef.current = (floorIndex) => {
       const ctx = spawnContext(floorIndex);
       if (!ctx) return;
-      if (session.seated) setSeated(false);
+      if (session.seated) {
+        session.seated = null;
+        session.posture = 'standing';
+        setSeated(false);
+        setLying(false);
+      }
       placeAt(walkArrival(ctx, floorIndex, session.walker.floorIndex, session.walker));
     };
 
@@ -347,7 +362,9 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
       const stand = session.seated;
       if (!stand) return;
       session.seated = null;
+      session.posture = 'standing';
       setSeated(false);
+      setLying(false);
       // Back where the walker stood, still looking where it looked.
       fromPosition.copy(camera.position);
       fromQuaternion.copy(camera.quaternion);
@@ -374,7 +391,25 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
         : null;
       if (!pose) return;
       session.seated = { x: walker.x, z: walker.z };
+      session.posture = 'seated';
       setSeated(true);
+      setLying(false);
+      startTransition(pose.x, pose.eyeY, pose.z, pose.lookX, pose.lookY, pose.lookZ);
+    };
+
+    const lieDown = (): void => {
+      const items = itemsRef.current;
+      const seat = items.find((item) => item.id === session.seatTargetId);
+      if (!seat || seat.type !== 'bed') return;
+      const walker = session.walker;
+      const world = worldRef.current;
+      const floorY = world?.elevations[walker.floorIndex] ?? 0;
+      const pose = bedLiePose(seat, floorY);
+      if (!pose) return;
+      session.seated = { x: walker.x, z: walker.z };
+      session.posture = 'lying';
+      setSeated(false);
+      setLying(true);
       startTransition(pose.x, pose.eyeY, pose.z, pose.lookX, pose.lookY, pose.lookZ);
     };
 
@@ -385,6 +420,14 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
       invalidateRef.current?.();
     };
     toggleSitRef.current = toggleSit;
+
+    const toggleLie = (): void => {
+      if (transition.active) return;
+      if (session.seated) standUp();
+      else lieDown();
+      invalidateRef.current?.();
+    };
+    toggleLieRef.current = toggleLie;
 
     const walking = () => Boolean(controls?.isLocked) || session.touch;
 
@@ -398,6 +441,13 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
         if (!controls?.isLocked) session.touch = false;
       }
       else if (interacts(event) && walking()) toggleSit();
+      else if (interactsLie(event) && walking()) {
+        if (session.seated) standUp();
+        else {
+          const seat = itemsRef.current.find((item) => item.id === session.seatTargetId);
+          if (seat?.type === 'bed') toggleLie();
+        }
+      }
     };
     const onKeyUp = (event: KeyboardEvent) => {
       if (releasesHeldKeys(event)) pressed.clear();
@@ -622,6 +672,7 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
           if (id !== session.seatTargetId) {
             session.seatTargetId = id;
             setSeatName(seat?.name ?? null);
+            setIsBed(seat?.type === 'bed');
           }
         }
 
@@ -634,13 +685,17 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
     return () => {
       cancelled = true;
       toggleSitRef.current = null;
+      toggleLieRef.current = null;
       arriveRef.current = null;
       session.touch = false;
       session.seated = null;
+      session.posture = 'standing';
       setLockRefused(false);
       setLocked(false);
       setSeated(false);
+      setLying(false);
       setSeatName(null);
+      setIsBed(false);
       setOutside(false);
       setNearStairs(false);
       session.outside = false;
@@ -693,6 +748,20 @@ export function useWalkthrough(options: UseWalkthroughOptions): UseWalkthroughRe
     invalidateRef.current?.();
   }, []);
   const toggleSit = useCallback(() => toggleSitRef.current?.(), []);
+  const toggleLie = useCallback(() => toggleLieRef.current?.(), []);
 
-  return { lockRefused, locked, seatName: seated ? null : seatName, seated, outside, nearStairs, lampStorey, setStick, toggleSit };
+  return {
+    lockRefused,
+    locked,
+    seatName: seated || lying ? null : seatName,
+    isBed: seated || lying ? false : isBed,
+    seated,
+    lying,
+    outside,
+    nearStairs,
+    lampStorey,
+    setStick,
+    toggleSit,
+    toggleLie,
+  };
 }

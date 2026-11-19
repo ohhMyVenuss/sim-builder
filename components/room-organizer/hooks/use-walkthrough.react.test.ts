@@ -46,6 +46,7 @@ function item(overrides: Partial<FurnitureItem> & { type: string; position: { x:
 const FRONT_DOOR = item({ id: 'front', type: 'door', width: 0.9, depth: 0.12, height: 2.05, position: { x: 0, z: -4 } });
 const SOFA = item({ id: 'sofa', type: 'sofa', name: 'Sofa', width: 2, depth: 0.9, height: 0.8, position: { x: 0, z: -2 } });
 const TV = item({ id: 'tv', type: 'tv', width: 1.5, depth: 0.4, height: 0.5, position: { x: 0, z: 1 }, rotation: Math.PI });
+const BED = item({ id: 'bed', type: 'bed', name: 'Double Bed', width: 2, depth: 1.6, height: 0.6, position: { x: 0, z: -2 } });
 const STAIRS = item({ id: 'stairs', type: 'stairs', width: 1.2, depth: 2.4, height: 3, position: { x: 3.2, z: 0.3 } });
 
 const building = (ground: FurnitureItem[], upper: FurnitureItem[] = []): WalkthroughBuilding => ({
@@ -266,6 +267,25 @@ describe('useWalkthrough — sitting (#463b)', () => {
     expect(result.current.seated).toBe(false);
     expect(camera.position.y).toBeCloseTo(1.6, 6);
     expect(camera.position.z).toBeCloseTo(-3.1, 6);
+  });
+
+  it('offers the bed with isBed, lies down with F and stands up with F or a step', async () => {
+    const { camera, lock, result } = await setup(building([FRONT_DOOR, BED]));
+    lock();
+    frames(10, 20);
+    expect(result.current.seatName).toBe('Double Bed');
+    expect(result.current.isBed).toBe(true);
+    key('keydown', 'KeyF', 'f');
+    frames(30);
+    expect(result.current.lying).toBe(true);
+    expect(result.current.seated).toBe(false);
+    expect(result.current.seatName).toBeNull();
+    expect(camera.position.y).toBeCloseTo(0.6 * 0.7, 2);
+    // Pressing F again stands back up
+    key('keydown', 'KeyF', 'f');
+    frames(30);
+    expect(result.current.lying).toBe(false);
+    expect(camera.position.y).toBeCloseTo(1.6, 6);
   });
 
   it('keys typed into a text field never reach the walker on a touch walk (#558)', async () => {

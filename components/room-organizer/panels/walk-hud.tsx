@@ -13,13 +13,17 @@ export interface WalkHudProps {
   lockRefused: boolean;
   /** The seat in reach, while standing (#463b). */
   seatName: string | null;
+  /** Whether the seat in reach is a bed. */
+  isBed?: boolean;
   seated: boolean;
+  lying?: boolean;
   floorName: string;
   /** PgUp / PgDn have somewhere to go (#446). */
   multiFloor: boolean;
   /** The touch stick: x right, y forward, each in [−1, 1]. */
   onStick(x: number, y: number): void;
   onToggleSit(): void;
+  onToggleLie?(): void;
   onExit(): void;
 }
 
@@ -36,12 +40,38 @@ export function WalkHud(props: WalkHudProps): JSX.Element {
   return touch ? <TouchWalkHud {...props} /> : <DesktopWalkHud {...props} />;
 }
 
-function DesktopWalkHud({ locked, lockRefused, seatName, seated, floorName, multiFloor }: WalkHudProps): JSX.Element {
-  const prompt = seated ? 'Stand up' : seatName ? `Sit on ${seatName}` : null;
+function DesktopWalkHud({ locked, lockRefused, seatName, isBed = false, seated, lying = false, floorName, multiFloor }: WalkHudProps): JSX.Element {
+  let prompt: string | null = null;
+  let promptKey = 'E';
+  let secondaryPrompt: string | null = null;
+  let secondaryKey: string | null = null;
+
+  if (seated || lying) {
+    prompt = 'Stand up';
+    promptKey = 'E / F';
+  } else if (seatName) {
+    if (isBed) {
+      prompt = `Sit on ${seatName}`;
+      promptKey = 'E';
+      secondaryPrompt = 'Lie down';
+      secondaryKey = 'F';
+    } else {
+      prompt = `Sit on ${seatName}`;
+      promptKey = 'E';
+    }
+  }
+
   return (
     <>
       <StatusBar floorName={floorName} />
-      {locked && <Reticle prompt={prompt} promptKey="E" />}
+      {locked && (
+        <Reticle
+          prompt={prompt}
+          promptKey={promptKey}
+          secondaryPrompt={secondaryPrompt}
+          secondaryKey={secondaryKey}
+        />
+      )}
       <div
         className="pointer-events-none absolute bottom-4 left-1/2"
         style={{ transform: 'translateX(-50%)' }}
@@ -80,43 +110,78 @@ function DesktopWalkHud({ locked, lockRefused, seatName, seated, floorName, mult
   );
 }
 
-function TouchWalkHud({ seatName, seated, floorName, onStick, onToggleSit, onExit }: WalkHudProps): JSX.Element {
-  const canSit = seated || seatName !== null;
+function TouchWalkHud({ seatName, isBed = false, seated, lying = false, floorName, onStick, onToggleSit, onToggleLie, onExit }: WalkHudProps): JSX.Element {
+  const isUp = seated || lying;
+  const canAct = isUp || seatName !== null;
   return (
     <>
       <StatusBar floorName={floorName} hint="Drag to look" onExit={onExit} />
       <Reticle prompt={null} promptKey="" />
       <Stick onStick={onStick} />
-      {canSit && (
-        <button
-          type="button"
-          onClick={onToggleSit}
-          className="pc-glass pc-glass--dark absolute"
-          aria-label={seated ? 'Stand up' : `Sit on ${seatName ?? ''}`}
+      {canAct && (
+        <div
+          className="absolute flex items-center gap-2"
           style={{
             ...ACTION_POSITION,
             right: 'calc(16px + env(safe-area-inset-right, 0px))',
             zIndex: 26,
-            minWidth: 88,
-            height: 48,
-            padding: '0 16px',
-            borderRadius: 24,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            fontFamily: 'var(--pc-font-display)',
-            fontWeight: 700,
-            fontSize: 12,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            color: 'var(--pc-cyan-glow)',
-            border: '1.5px solid var(--pc-cyan-glow)',
           }}
         >
-          <Icon name={seated ? 'arrowU' : 'sofa'} size={16} />
-          {seated ? 'Stand' : 'Sit'}
-        </button>
+          <button
+            type="button"
+            onClick={onToggleSit}
+            className="pc-glass pc-glass--dark"
+            aria-label={isUp ? 'Stand up' : `Sit on ${seatName ?? ''}`}
+            style={{
+              minWidth: 88,
+              height: 48,
+              padding: '0 16px',
+              borderRadius: 24,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              fontFamily: 'var(--pc-font-display)',
+              fontWeight: 700,
+              fontSize: 12,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: 'var(--pc-cyan-glow)',
+              border: '1.5px solid var(--pc-cyan-glow)',
+            }}
+          >
+            <Icon name={isUp ? 'arrowU' : 'sofa'} size={16} />
+            {isUp ? 'Stand' : 'Sit'}
+          </button>
+          {!isUp && isBed && onToggleLie && (
+            <button
+              type="button"
+              onClick={onToggleLie}
+              className="pc-glass pc-glass--dark"
+              aria-label="Lie down on bed"
+              style={{
+                minWidth: 88,
+                height: 48,
+                padding: '0 16px',
+                borderRadius: 24,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontFamily: 'var(--pc-font-display)',
+                fontWeight: 700,
+                fontSize: 12,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                color: 'var(--pc-cyan-glow)',
+                border: '1.5px solid var(--pc-cyan-glow)',
+              }}
+            >
+              <Icon name="bed" size={16} />
+              Lie
+            </button>
+          )}
+        </div>
       )}
     </>
   );
@@ -269,7 +334,17 @@ function StatusBar({ floorName, hint, onExit }: { floorName: string; hint?: stri
   );
 }
 
-function Reticle({ prompt, promptKey }: { prompt: string | null; promptKey: string }): JSX.Element {
+function Reticle({
+  prompt,
+  promptKey,
+  secondaryPrompt,
+  secondaryKey,
+}: {
+  prompt: string | null;
+  promptKey: string;
+  secondaryPrompt?: string | null;
+  secondaryKey?: string | null;
+}): JSX.Element {
   const active = prompt !== null;
   return (
     <div
@@ -292,6 +367,12 @@ function Reticle({ prompt, promptKey }: { prompt: string | null; promptKey: stri
         <div style={{ position: 'absolute', top: 30, whiteSpace: 'nowrap' }} role="status">
           <HintChip>
             <Hint label={prompt}>{promptKey}</Hint>
+            {secondaryPrompt && secondaryKey && (
+              <>
+                <Dot />
+                <Hint label={secondaryPrompt}>{secondaryKey}</Hint>
+              </>
+            )}
           </HintChip>
         </div>
       )}

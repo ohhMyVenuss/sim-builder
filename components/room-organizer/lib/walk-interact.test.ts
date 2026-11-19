@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { findNpcSeats } from './npc-seats';
 import { buildWalkerColliders } from './walk-collision';
-import { SEATED_EYE, findSeat, isSeat, seatPose } from './walk-interact';
+import { SEATED_EYE, bedLiePose, findSeat, isSeat, seatPose } from './walk-interact';
 import type { FurnitureItem } from './types';
 
 function item(overrides: Partial<FurnitureItem> & { type: string; position: { x: number; z: number } }): FurnitureItem {
@@ -180,5 +180,23 @@ describe('seats and the TV behind walls (#566)', () => {
     const tvHere = item({ id: 'tv', type: 'tv', width: 1, depth: 0.3, height: 0.5, position: { x: 0, z: -0.2 } });
     const open = seatPose(chair, [chair, tvHere], 0, { colliders: buildWalkerColliders({ width: 6, depth: 5, floors: [{ items: [chair, tvHere], interiorWalls: [PARTITION] }] })[0]! })!;
     expect([open.lookX, open.lookZ]).toEqual([0, -0.2]);
+  });
+});
+
+describe('bedLiePose', () => {
+  const BED = item({ id: 'bed', type: 'bed', name: 'Double Bed', width: 2, depth: 1.6, height: 0.6, position: { x: 1, z: 2 }, rotation: 0 });
+
+  it('places the eye at the pillow head of the bed, lower than sitting', () => {
+    const lie = bedLiePose(BED, 0)!;
+    const sit = seatPose(BED, [BED], 0)!;
+    expect(lie).not.toBeNull();
+    expect(lie.eyeY).toBeLessThan(sit.eyeY);
+    // Head at local -z (rotation = 0 means head is at z < bed.z)
+    expect(lie.z).toBeLessThan(BED.position!.z);
+    expect(lie.x).toBeCloseTo(BED.position!.x, 2);
+  });
+
+  it('returns null for a non-bed', () => {
+    expect(bedLiePose(SOFA, 0)).toBeNull();
   });
 });
